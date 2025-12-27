@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="mb-4">Live Attendance Dashboard</h2>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Currently In Class</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ present_now|length }} Students</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4 class="mb-3">Today's Logs</h4>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>In Time</th>
+                <th>Out Time</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in all_today %}
+            <tr>
+                <td>{{ row.student.name }}</td>
+                <td>{{ row.student.grade }} - {{ row.student.section }}</td>
+                <td>{{ row.in_time.strftime('%H:%M:%S') }}</td>
+                <td>
+                    {% if row.out_time %}
+                        {{ row.out_time.strftime('%H:%M:%S') }}
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Active</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.out_time %}
+                        <span class="badge bg-success">Completed</span>
+                    {% else %}
+                        <span class="badge bg-primary">Present</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center">No attendance records today.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

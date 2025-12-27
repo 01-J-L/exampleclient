@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Attendance Feed</title>
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* The Main Card Container */
+        .id-card {
+            background: white;
+            width: 600px;
+            height: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* The Top Header (Logo Area) */
+        .header {
+            display: flex;
+            height: 70px;
+        }
+
+        .header-gold {
+            background-color: #C19929; /* Curtin Gold-ish color */
+            width: 15%; /* Small box on left */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .header-logo-img {
+            width: 40px;
+            opacity: 0.8;
+        }
+
+        .header-black {
+            background-color: #111;
+            width: 85%;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        /* The Content Area */
+        .content {
+            display: flex;
+            flex: 1;
+            padding: 30px;
+        }
+
+        /* Photo Left Side */
+        .photo-area {
+            width: 40%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .student-photo {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 50%; /* Circular photo like modern IDs */
+            border: 5px solid #f0f0f0;
+        }
+
+        /* Text Right Side */
+        .info-area {
+            width: 60%;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title-label {
+            font-size: 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #000;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .student-name {
+            font-size: 32px;
+            font-weight: 400;
+            color: #222;
+            margin-bottom: 30px;
+            line-height: 1.1;
+        }
+
+        .student-id {
+            font-size: 24px;
+            color: #333;
+            font-weight: 400;
+            margin-bottom: 5px;
+        }
+        
+        .scan-time {
+            font-size: 16px;
+            color: #C19929; /* Gold color for status */
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        /* Loading / Waiting State */
+        .waiting-message {
+            display: none;
+            text-align: center;
+            width: 100%;
+            margin-top: 100px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="id-card" id="card-display">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-gold">
+                <!-- Simple icon representing school logo -->
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/></svg>
+            </div>
+            <div class="header-black">
+                SCHOOL NAME HERE
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="photo-area">
+                <!-- Using a placeholder API for now since we don't have real photo uploads yet -->
+                <img src="https://ui-avatars.com/api/?name=Waiting&background=random" class="student-photo" id="photo">
+            </div>
+            <div class="info-area">
+                <div class="title-label">STUDENT</div>
+                <div class="student-name" id="name">Waiting for scan...</div>
+                <div class="student-id" id="details">---</div>
+                <div class="scan-time" id="status">---</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastId = null;
+
+        function fetchLatest() {
+            fetch('/api/latest_attendee')
+            .then(response => response.json())
+            .then(data => {
+                if (data.found) {
+                    // Update the DOM elements
+                    document.getElementById('name').innerText = data.name;
+                    document.getElementById('details').innerText = data.grade + " - " + data.section;
+                    document.getElementById('status').innerText = data.status + " AT " + data.time;
+                    
+                    // Only update photo if it's a new person (prevents flickering)
+                    if (lastId !== data.id) {
+                        // Generate avatar based on name
+                        document.getElementById('photo').src = `https://ui-avatars.com/api/?name=${data.name}&background=0D8ABC&color=fff&size=200`;
+                        lastId = data.id;
+                        
+                        // Add a subtle flash animation
+                        const card = document.getElementById('card-display');
+                        card.style.opacity = '0.8';
+                        setTimeout(() => card.style.opacity = '1', 200);
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
+        // Poll the server every 2 seconds
+        setInterval(fetchLatest, 2000);
+        
+        // Run immediately on load
+        fetchLatest();
+    </script>
+
+</body>
+</html>
