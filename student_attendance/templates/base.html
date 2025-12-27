@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -15,17 +16,21 @@
     <style>
         body {
             background-color: #f8f9fa;
+            overflow-x: hidden; /* Prevent horizontal scroll on mobile */
         }
 
+        /* Sidebar Styling */
         .sidebar {
             min-height: 100vh;
             background: #212529;
             color: white;
+            transition: all 0.3s;
         }
 
         .sidebar .nav-link {
             color: rgba(255, 255, 255, .85);
             margin-bottom: 5px;
+            padding: 10px 15px;
         }
 
         .sidebar .nav-link:hover {
@@ -50,67 +55,98 @@
             padding-left: 10px;
         }
 
+        /* Content Area */
         main {
             background: white;
             min-height: 100vh;
-            border-left: 1px solid #dee2e6;
+            width: 100%;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 767.98px) {
+            .sidebar {
+                min-height: auto; /* Allow collapse */
+            }
+            main {
+                padding-top: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
+    
+    <!-- Mobile Navbar Header (Visible only on small screens) -->
+    <nav class="navbar navbar-dark bg-dark d-md-none p-3 mb-3">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1"><i class="bi bi-qr-code-scan"></i> Attendance</span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
     <div class="container-fluid">
         <div class="row">
-            <!-- SIDEBAR NAVIGATION -->
-            <nav class="col-md-2 d-none d-md-block sidebar p-3">
-                <h4 class="mb-4 text-center text-white"><i class="bi bi-qr-code-scan"></i> Attendance</h4>
+            <!-- RESPONSIVE SIDEBAR: 
+                 1. d-none d-md-block: Hides on mobile, shows normally on desktop 
+                 2. Offcanvas component handles the mobile slide-in menu 
+            -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse offcanvas-md offcanvas-start" tabindex="-1" aria-labelledby="sidebarMenuLabel">
+                
+                <div class="offcanvas-header d-md-none">
+                    <h5 class="offcanvas-title text-white" id="sidebarMenuLabel">Menu</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+                </div>
 
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">
-                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/scan">
-                            <i class="bi bi-upc-scan me-2"></i> Scanner
-                        </a>
-                    </li>
+                <div class="offcanvas-body d-block px-3 pt-3">
+                    <h4 class="mb-4 text-white d-none d-md-block"><i class="bi bi-qr-code-scan"></i> Attendance</h4>
 
-                    <div class="sidebar-heading">Data & Reports</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/scan">
+                                <i class="bi bi-upc-scan me-2"></i> Scanner
+                            </a>
+                        </li>
 
-                    <!-- NEW: Search Page -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="/view_students">
-                            <i class="bi bi-search me-2"></i> Search Records
-                        </a>
-                    </li>
+                        <div class="sidebar-heading">Data & Reports</div>
 
-                    <!-- NEW: Live Feed (Opens in new tab) -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="/live_feed" target="_blank">
-                            <i class="bi bi-tv me-2"></i> Live Display
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/view_students">
+                                <i class="bi bi-search me-2"></i> Search Records
+                            </a>
+                        </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="/export_page"> <!-- Changed href -->
-                            <i class="bi bi-file-earmark-excel me-2"></i> Export Report
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/live_feed" target="_blank">
+                                <i class="bi bi-tv me-2"></i> Live Display
+                            </a>
+                        </li>
 
-                    <div class="sidebar-heading">Administration</div>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/export_page">
+                                <i class="bi bi-file-earmark-excel me-2"></i> Export Report
+                            </a>
+                        </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin">
-                            <i class="bi bi-person-plus-fill me-2"></i> Manage Students
-                        </a>
-                    </li>
-                </ul>
+                        <div class="sidebar-heading">Administration</div>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin">
+                                <i class="bi bi-person-plus-fill me-2"></i> Manage Students
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </nav>
 
             <!-- MAIN CONTENT AREA -->
-            <main class="col-md-10 ms-sm-auto px-md-4 pt-4">
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 pt-4">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -119,5 +155,4 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

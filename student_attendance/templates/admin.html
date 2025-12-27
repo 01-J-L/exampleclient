@@ -1,89 +1,84 @@
+
 {% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid px-0"> <!-- px-0 to maximize space on small screens -->
     <h2 class="mb-4">Manage Students</h2>
 
-    <!-- NEW: Bulk Import/Export Section -->
+    <!-- Bulk Import/Export Section -->
     <div class="card mb-4 shadow-sm border-primary">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Bulk Actions (Excel)</h5>
+            <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Bulk Actions</h5>
         </div>
         <div class="card-body">
-            <div class="row align-items-center">
+            <div class="row g-3 align-items-center">
                 <!-- Import Form -->
-                <div class="col-md-8 border-end">
+                <div class="col-lg-8 border-end-lg">
                     <form action="/import_students" method="POST" enctype="multipart/form-data" class="row g-2">
-                        <div class="col-auto">
-                            <label class="col-form-label fw-bold">Import Students:</label>
+                        <div class="col-12 col-md-auto">
+                            <label class="col-form-label fw-bold">Import:</label>
                         </div>
-                        <div class="col-auto">
+                        <div class="col-12 col-md">
                             <input type="file" name="file" class="form-control" accept=".xlsx, .xls" required>
                         </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-success">Upload & Add</button>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Upload</button>
                         </div>
-                        <div class="col-auto">
-                            <a href="/download_template" class="btn btn-outline-secondary btn-sm mt-1">
-                                <i class="bi bi-download"></i> Download Template
+                        <div class="col-12 col-md-auto">
+                            <a href="/download_template" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="bi bi-download"></i> Template
                             </a>
                         </div>
                     </form>
-                    <small class="text-muted">Download the template first, fill it out, then upload it here.</small>
                 </div>
 
                 <!-- Export Button -->
-                <div class="col-md-4 text-center">
-                    <p class="mb-2 fw-bold">Export Master List</p>
-                    <a href="/export_students" class="btn btn-primary w-75">
-                        <i class="bi bi-cloud-download"></i> Download All Students
+                <div class="col-lg-4 text-center mt-3 mt-lg-0">
+                    <a href="/export_students" class="btn btn-primary w-100">
+                        <i class="bi bi-cloud-download"></i> Export All
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- EXISTING: Add Single Student Form -->
+    <!-- Add Single Student Form -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-dark text-white">
             <h5 class="mb-0">Add Single Student</h5>
         </div>
         <div class="card-body">
-            <!-- ... Keep your existing <form> code here ... -->
-            <form method="POST" action="{{ url_for('admin') }}">
-                <!-- (Your existing form inputs for Name, Grade, Section etc go here) -->
-                <!-- Just copy paste the form from the previous step inside here -->
+             <form method="POST" action="{{ url_for('admin') }}">
                  <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control" required>
                     </div>
-                    <!-- ... rest of your inputs ... -->
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label class="form-label">Grade <span class="text-danger">*</span></label>
                         <select name="grade" class="form-select" required>
                              <option value="">Select...</option>
                              {% for i in range(1, 13) %}
-                             <option value="Grade {{ i }}">Grade {{ i }}</option>
+                             <option value="Grade {{ i }}">Gr {{ i }}</option>
                              {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label class="form-label">Section <span class="text-danger">*</span></label>
                         <input type="text" name="section" class="form-control" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-4">
                         <label class="form-label">Contact <span class="text-danger">*</span></label>
                         <input type="text" name="contact" class="form-control" required>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Parent Name <span class="text-danger">*</span></label>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Parent <span class="text-danger">*</span></label>
                         <input type="text" name="parent" class="form-control" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-4">
                         <label class="form-label">Email</label>
                         <input type="email" name="email" class="form-control">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-4">
                         <label class="form-label">Address</label>
                         <input type="text" name="address" class="form-control">
                     </div>
@@ -95,59 +90,44 @@
         </div>
     </div>
 
-    <!-- Section 2: Student List Table -->
+    <!-- Student List Table -->
     <h4 class="mb-3">Registered Students</h4>
-    <div class="table-responsive bg-white shadow-sm p-3 rounded">
-        <table class="table table-striped table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Grade & Section</th>
-                    <th>Parent / Guardian</th>
-                    <th>Contact</th>
-                    <th class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in students %}
-                <tr>
-                    <td>{{ s.id }}</td>
-                    <td class="fw-bold">{{ s.name }}</td>
-                    <td><span class="badge bg-secondary">{{ s.grade }}</span> {{ s.section }}</td>
-                    <td>{{ s.parent_name }}</td>
-                    <td>{{ s.contact_number }}</td>
-                    <td class="text-center">
-                        <!-- Grouped Buttons -->
-                        <div class="btn-group" role="group">
-                            <!-- View/Edit Button -->
-                            <a href="{{ url_for('edit_student', student_id=s.id) }}" class="btn btn-sm btn-warning text-dark">
-                                Edit
-                            </a>
-                            
-                            <!-- Download QR Button -->
-                            <a href="{{ url_for('generate_qr', student_id=s.id) }}" class="btn btn-sm btn-dark">
-                                QR
-                            </a>
-                            
-                            <!-- Delete Button -->
-                            <a href="{{ url_for('delete_student', student_id=s.id) }}" 
-                               class="btn btn-sm btn-danger" 
-                               onclick="return confirm('Are you sure you want to delete {{ s.name }}? This will remove all their attendance logs.')">
-                                Del
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
-                        No students found. Add one above.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <!-- table-responsive is KEY for mobile tables -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 align-middle">
+                    <thead class="table-dark text-nowrap">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Parent</th>
+                            <th>Contact</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in students %}
+                        <tr>
+                            <td>{{ s.id }}</td>
+                            <td class="fw-bold text-nowrap">{{ s.name }}</td>
+                            <td class="text-nowrap">{{ s.grade }} - {{ s.section }}</td>
+                            <td class="text-nowrap">{{ s.parent_name }}</td>
+                            <td>{{ s.contact_number }}</td>
+                            <td class="text-center text-nowrap">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_student', student_id=s.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                    <a href="{{ url_for('generate_qr', student_id=s.id) }}" class="btn btn-sm btn-dark">QR</a>
+                                    <a href="{{ url_for('delete_student', student_id=s.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Del</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

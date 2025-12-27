@@ -1,29 +1,30 @@
+
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6 text-center">
+    <div class="col-md-8 col-lg-6 text-center">
         <h3 class="mb-4">Scan QR Code</h3>
         
-        <!-- The visual reader -->
-        <div id="reader" style="width: 100%; min-height: 300px; background: #000;"></div>
+        <div class="card shadow-sm">
+            <div class="card-body p-2">
+                <!-- ID "reader" needs to be fluid -->
+                <div id="reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+            </div>
+        </div>
         
-        <!-- Alert Box -->
         <div id="result-alert" class="alert mt-3" style="display:none;"></div>
     </div>
 </div>
 
-<!-- Optional Beep Sound -->
-<!-- Place a beep.mp3 in your static folder or remove this logic -->
 <audio id="beep-sound" src="{{ url_for('static', filename='beep.mp3') }}"></audio>
 
 <script>
-    let isProcessing = false; // Prevent double scanning
+    let isProcessing = false;
 
     function onScanSuccess(decodedText, decodedResult) {
         if (isProcessing) return;
         isProcessing = true;
 
-        // Play Beep
         const audio = document.getElementById("beep-sound");
         if(audio) audio.play().catch(e => console.log('Audio play failed', e));
 
@@ -39,7 +40,6 @@
             alertBox.className = `alert alert-${data.type === 'error' ? 'danger' : data.type === 'warning' ? 'warning' : 'success'} mt-3`;
             alertBox.innerText = data.message;
 
-            // Pause scanning for 3 seconds to allow student to move away
             setTimeout(() => {
                 alertBox.style.display = 'none';
                 isProcessing = false;
@@ -51,9 +51,13 @@
         });
     }
 
-    // Initialize Scanner
+    // Initialize Scanner with responsive aspect ratio
     const html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", { fps: 10, qrbox: 250 }
+        "reader", { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 }, // Use numeric pixel values for stability
+            aspectRatio: 1.0 
+        }
     );
     html5QrcodeScanner.render(onScanSuccess);
 </script>
