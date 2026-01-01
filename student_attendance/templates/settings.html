@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- FLASH MESSAGES -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for category, message in messages %}
+        <div class="p-4 rounded-xl border shadow-sm font-bold 
+            {% if category == 'success' %} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 
+            {% else %} bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 {% endif %}">
+            {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
+    <p class="text-gray-500 dark:text-slate-400 text-sm">Manage Academic Terms, Grades, Sections, Backup, and Interface.</p>
+</div>
+
+<!-- MAIN GRID -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+    
+    <!-- 1. ACADEMIC TERMS -->
+    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+        <div class="bg-indigo-50 dark:bg-indigo-900/20 px-6 py-4 border-b border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+            <h5 class="font-bold text-indigo-800 dark:text-indigo-300">1. School Years</h5>
+            <i class="ri-calendar-event-line text-indigo-300 dark:text-indigo-500 text-xl"></i>
+        </div>
+        <div class="p-6 flex-1 flex flex-col">
+            <form action="{{ url_for('add_term') }}" method="POST" class="flex gap-2 mb-6">
+                <input type="text" name="name" placeholder="e.g. 2024-2025" required class="flex-1 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold transition">Add</button>
+            </form>
+            <ul class="divide-y divide-gray-100 dark:divide-slate-700 overflow-y-auto max-h-60 flex-1">
+                {% for term in global_terms %}
+                <li class="py-3 flex justify-between items-center group hover:bg-gray-50 dark:hover:bg-slate-800 px-2 rounded">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold {{ 'text-green-600 dark:text-green-400' if term.is_current else 'text-gray-700 dark:text-slate-300' }}">{{ term.name }}</span>
+                        {% if term.is_current %}
+                            <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Active</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if not term.is_current %}
+                            <a href="{{ url_for('set_current_term', id=term.id) }}" class="text-[10px] bg-gray-100 dark:bg-slate-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-600 dark:text-slate-400 hover:text-green-700 dark:hover:text-green-400 px-2 py-1 rounded border border-gray-200 dark:border-slate-600 font-bold transition">Set Active</a>
+                            <a href="{{ url_for('delete_term', id=term.id) }}" class="text-red-400 dark:text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition" onclick="return confirm('Delete this School Year?')">
+                                <i class="ri-delete-bin-fill"></i>
+                            </a>
+                        {% else %}
+                            <i class="ri-checkbox-circle-fill text-green-500 dark:text-green-400"></i>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- 2. GRADE LEVELS -->
+    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+        <div class="bg-blue-50 dark:bg-blue-900/20 px-6 py-4 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between">
+            <h5 class="font-bold text-blue-800 dark:text-blue-300">2. Grade Levels</h5>
+            <i class="ri-graduation-cap-line text-blue-300 dark:text-blue-500 text-xl"></i>
+        </div>
+        <div class="p-6 flex-1 flex flex-col">
+            <form action="{{ url_for('add_grade') }}" method="POST" class="flex gap-2 mb-6">
+                <input type="text" name="name" placeholder="e.g. Grade 13" required class="flex-1 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition">Add</button>
+            </form>
+            <ul class="divide-y divide-gray-100 dark:divide-slate-700 overflow-y-auto max-h-60 flex-1">
+                {% for grade in global_grades %}
+                <li class="py-3 flex justify-between items-center group hover:bg-gray-50 dark:hover:bg-slate-800 px-2 rounded">
+                    <span class="text-gray-700 dark:text-slate-300 font-medium">{{ grade.name }}</span>
+                    <a href="{{ url_for('delete_grade', id=grade.id) }}" class="text-red-400 dark:text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition" onclick="return confirm('Delete?')"><i class="ri-delete-bin-fill"></i></a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- 3. SECTIONS -->
+    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+        <div class="bg-purple-50 dark:bg-purple-900/20 px-6 py-4 border-b border-purple-100 dark:border-purple-800 flex items-center justify-between">
+            <h5 class="font-bold text-purple-800 dark:text-purple-300">3. Section Names</h5>
+            <i class="ri-group-line text-purple-300 dark:text-purple-500 text-xl"></i>
+        </div>
+        <div class="p-6 flex-1 flex flex-col">
+            <form action="{{ url_for('add_section') }}" method="POST" class="flex gap-2 mb-6">
+                <input type="text" name="name" placeholder="e.g. Section C" required class="flex-1 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500">
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold transition">Add</button>
+            </form>
+            <ul class="divide-y divide-gray-100 dark:divide-slate-700 overflow-y-auto max-h-60 flex-1">
+                {% for section in global_sections %}
+                <li class="py-3 flex justify-between items-center group hover:bg-gray-50 dark:hover:bg-slate-800 px-2 rounded">
+                    <span class="text-gray-700 dark:text-slate-300 font-medium">{{ section.name }}</span>
+                    <a href="{{ url_for('delete_section', id=section.id) }}" class="text-red-400 dark:text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition" onclick="return confirm('Delete?')"><i class="ri-delete-bin-fill"></i></a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- 4. INTERFACE APPEARANCE (BUTTON HERE) -->
+    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-full">
+        <div class="bg-gray-50 dark:bg-slate-800 px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+            <h5 class="font-bold text-gray-800 dark:text-slate-200">4. Interface Theme</h5>
+            <i class="ri-palette-line text-gray-400 dark:text-slate-500 text-xl"></i>
+        </div>
+        <div class="p-6 flex-1 flex flex-col justify-center items-center text-center">
+            <p class="text-sm text-gray-500 dark:text-slate-400 mb-6">Toggle between Light and Dark mode for the dashboard.</p>
+            
+            <button onclick="toggleTheme()" class="group relative inline-flex items-center gap-3 px-8 py-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border-2 border-transparent hover:border-primary transition-all duration-300 w-full justify-center">
+                
+                <!-- Icons (These swap based on dark class in html tag) -->
+                <i class="ri-sun-fill text-2xl text-orange-500 dark:hidden"></i>
+                <i class="ri-moon-clear-fill text-2xl text-primary hidden dark:block"></i>
+                
+                <!-- Text -->
+                <div class="text-left">
+                    <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Current Mode</span>
+                    <span class="block font-bold text-gray-900 dark:text-white dark:hidden">Light Mode</span>
+                    <span class="block font-bold text-gray-900 dark:text-white hidden dark:block">Dark Mode</span>
+                </div>
+
+                <!-- Status Indicator -->
+                <div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-green-500"></div>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- 5. SYSTEM MAINTENANCE -->
+<div class="mt-8 bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
+    <div class="bg-gray-800 dark:bg-slate-900 px-6 py-4 border-b border-gray-700 dark:border-slate-800 flex items-center justify-between text-white">
+        <h5 class="font-bold"><i class="ri-database-2-line mr-2"></i> 5. System Backup & Restore</h5>
+    </div>
+    
+    <div class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
+        
+        <!-- BACKUP -->
+        <div class="flex-1">
+            <h6 class="font-bold text-gray-800 dark:text-white mb-2">Backup Data</h6>
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-4">Downloads database and photos.</p>
+            <a href="{{ url_for('backup_system') }}" class="inline-flex items-center bg-gray-900 dark:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-black dark:hover:bg-slate-900 transition">
+                <i class="ri-download-cloud-2-line mr-2"></i> Download Backup
+            </a>
+        </div>
+
+        <div class="hidden md:block w-px bg-gray-200 dark:bg-slate-700 self-stretch"></div>
+
+        <!-- RESTORE -->
+        <div class="flex-1">
+            <h6 class="font-bold text-gray-800 dark:text-white mb-2">Restore Data</h6>
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-4">Overwrite system with a backup file.</p>
+            <form action="{{ url_for('restore_system') }}" method="POST" enctype="multipart/form-data" class="flex gap-2">
+                <input type="file" name="backup_file" accept=".zip" required class="block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-blue-900/20 file:text-blue-700 dark:file:text-blue-300 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800">
+                <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-red-700 transition shadow-md whitespace-nowrap text-sm" onclick="return confirm('Overwrite system? Irreversible.')">
+                    Restore
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

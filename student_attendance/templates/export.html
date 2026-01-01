@@ -1,70 +1,69 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <h2 class="mb-4">Generate Attendance Report</h2>
-            
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <i class="bi bi-file-earmark-spreadsheet"></i> Report Options
-                </div>
-                <div class="card-body">
-                    <form action="/download_report" method="POST">
-                        
-                        <!-- Date Range Selection -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">From Date</label>
-                                <input type="date" name="start_date" class="form-control" required id="startDate">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">To Date</label>
-                                <input type="date" name="end_date" class="form-control" required id="endDate">
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <!-- Optional Filters -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Filter by Grade (Optional)</label>
-                                <select name="grade" class="form-select">
-                                    <option value="">All Grades</option>
-                                    <option value="Kindergarten">Kindergarten</option>
-                                    {% for i in range(1, 13) %}
-                                    <option value="Grade {{ i }}">Grade {{ i }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Filter by Section (Optional)</label>
-                                <input type="text" name="section" class="form-control" placeholder="e.g. Rose">
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="bi bi-download"></i> Download Excel Report
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
+<div class="max-w-3xl mx-auto mt-4 md:mt-10">
+    <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Attendance Report</h2>
+        <p class="text-gray-500 dark:text-slate-400 text-sm">Generate and download Excel logs.</p>
+    </div>
+    
+    <div class="bg-white dark:bg-dark-surface rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="bg-dark dark:bg-slate-900 px-8 py-5 flex items-center text-white border-b border-gray-700 dark:border-slate-800">
+            <i class="ri-file-settings-line text-2xl mr-4 opacity-80"></i>
+            <div>
+                <h5 class="font-bold text-lg">Report Settings</h5>
             </div>
-            
-            <div class="alert alert-info mt-3">
-                <i class="bi bi-info-circle"></i> 
-                Leave "Grade" and "Section" blank to download attendance for <strong>all students</strong> within the selected dates.
-            </div>
+        </div>
+
+        <div class="p-6 md:p-8">
+            <form action="/download_report" method="POST">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">From Date</label>
+                        <input type="date" name="start_date" id="startDate" required class="w-full rounded-xl border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-3 focus:ring-2 focus:ring-primary outline-none shadow-sm font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">To Date</label>
+                        <input type="date" name="end_date" id="endDate" required class="w-full rounded-xl border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-3 focus:ring-2 focus:ring-primary outline-none shadow-sm font-medium">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 my-6">
+                    <div class="h-px bg-gray-100 dark:bg-slate-700 flex-1"></div>
+                    <span class="text-xs font-bold text-gray-300 dark:text-slate-600 uppercase">Optional Filters</span>
+                    <div class="h-px bg-gray-100 dark:bg-slate-700 flex-1"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Grade</label>
+                        <select name="grade" class="w-full rounded-xl border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-3 focus:ring-2 focus:ring-primary outline-none">
+                            <option value="">All Grades</option>
+                            {% for g in global_grades %}
+                            <option value="{{ g.name }}">{{ g.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Section</label>
+                        <select name="section" class="w-full rounded-xl border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-3 focus:ring-2 focus:ring-primary outline-none">
+                            <option value="">All Sections</option>
+                            {% for s in global_sections %}
+                            <option value="{{ s.name }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center text-lg">
+                    <i class="ri-download-cloud-2-line mr-2"></i> Download Excel
+                </button>
+            </form>
         </div>
     </div>
 </div>
-
 <script>
-    // Automatically set default dates to Today
-    document.addEventListener('DOMContentLoaded', (event) => {
+    document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById("startDate").value = today;
         document.getElementById("endDate").value = today;

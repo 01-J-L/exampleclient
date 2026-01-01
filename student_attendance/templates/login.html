@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCA Admin Login</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#1e3a8a', secondary: '#fbbf24', dark: '#0f172a' }
+                }
+            }
+        }
+
+        // 1. Check LocalStorage or System Preference immediately
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+<body class="bg-primary dark:bg-dark min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 transition-colors duration-300 relative overflow-hidden">
+
+    <!-- Background Pattern -->
+    <div class="absolute inset-0 opacity-10 pointer-events-none bg-repeat" style="background-image: url('https://www.transparenttextures.com/patterns/school.png');"></div>
+
+    <!-- Theme Toggle Button (Top Right) -->
+    <div class="absolute top-4 right-4 z-20">
+        <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-all border border-white/10 shadow-lg">
+            <i class="ri-sun-fill text-xl dark:hidden"></i>
+            <i class="ri-moon-fill text-xl hidden dark:block"></i>
+        </button>
+    </div>
+
+    <!-- Login Card -->
+    <div class="w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-t-8 border-secondary relative z-10 transform transition-all hover:scale-[1.01]">
+        
+        <div class="p-8 sm:p-10">
+            <!-- Header -->
+            <div class="flex flex-col items-center mb-8">
+                <img src="{{ url_for('static', filename='mca.png') }}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-4 drop-shadow-md animate-bounce-slow">
+                <h2 class="text-2xl sm:text-3xl font-bold text-center text-primary dark:text-white tracking-tight">Admin Portal</h2>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 uppercase tracking-widest font-semibold mt-1">Maranatha Christian Academy</p>
+            </div>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="mb-6 p-3 rounded-lg text-sm text-center font-bold border {{ 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' if category == 'error' else 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' }}">
+                      {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- Form -->
+            <form method="POST" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1.5 uppercase ml-1">Username</label>
+                    <input type="text" name="username" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-secondary/20 focus:border-secondary outline-none transition-all text-sm sm:text-base" required placeholder="Enter your username">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1.5 uppercase ml-1">Password</label>
+                    <input type="password" name="password" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-secondary/20 focus:border-secondary outline-none transition-all text-sm sm:text-base" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="w-full bg-primary hover:bg-blue-900 dark:bg-blue-600 dark:hover:bg-blue-700 text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base tracking-wide transition-all shadow-lg shadow-blue-900/20 active:scale-95 mt-2">
+                    Sign In to Dashboard
+                </button>
+            </form>
+        </div>
+        
+        <!-- Footer -->
+        <div class="bg-gray-50 dark:bg-slate-900/50 p-4 text-center border-t border-gray-100 dark:border-slate-700">
+            <a href="{{ url_for('home') }}" class="text-sm font-medium text-gray-500 hover:text-secondary dark:text-slate-400 dark:hover:text-secondary transition-colors">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // 2. Toggle Function
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+    </script>
+</body>
+</html>

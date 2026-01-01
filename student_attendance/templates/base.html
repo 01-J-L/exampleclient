@@ -1,158 +1,227 @@
-
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance System</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- QR Scanner Lib -->
+    <title>Maranatha Christian Academy</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e3a8a',   
+                        secondary: '#fbbf24', 
+                        accent: '#15803d',    
+                        dark: '#0f172a',
+                        'dark-surface': '#1e293b'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+        // GLOBAL THEME CHECK ON LOAD
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
     <style>
-        body {
-            background-color: #f8f9fa;
-            overflow-x: hidden; /* Prevent horizontal scroll on mobile */
-        }
-
-        /* Sidebar Styling */
-        .sidebar {
-            min-height: 100vh;
-            background: #212529;
-            color: white;
-            transition: all 0.3s;
-        }
-
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, .85);
-            margin-bottom: 5px;
-            padding: 10px 15px;
-        }
-
-        .sidebar .nav-link:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-        }
-
-        .sidebar .nav-link.active {
-            background-color: #0d6efd;
-            color: white;
-            border-radius: 5px;
-        }
-
-        .sidebar-heading {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #6c757d;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            padding-left: 10px;
-        }
-
-        /* Content Area */
-        main {
-            background: white;
-            min-height: 100vh;
-            width: 100%;
-        }
-
-        /* Mobile specific adjustments */
-        @media (max-width: 767.98px) {
-            .sidebar {
-                min-height: auto; /* Allow collapse */
-            }
-            main {
-                padding-top: 20px;
-            }
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        html { transition: background-color 0.3s, color 0.3s; }
+        .sidebar-gradient { background: linear-gradient(180deg, #1e3a8a 0%, #172554 100%); }
+        .dark .sidebar-gradient { background: #0f172a; }
     </style>
 </head>
+<body class="bg-gray-50 text-gray-800 dark:bg-dark dark:text-slate-200 antialiased transition-colors duration-300">
 
-<body>
-    
-    <!-- Mobile Navbar Header (Visible only on small screens) -->
-    <nav class="navbar navbar-dark bg-dark d-md-none p-3 mb-3">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1"><i class="bi bi-qr-code-scan"></i> Attendance</span>
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+    <!-- Mobile Header -->
+    <header class="md:hidden bg-primary dark:bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-40 shadow-md">
+        <div class="flex items-center space-x-3">
+            <img src="{{ url_for('static', filename='mca.png') }}" class="w-10 h-10 object-contain filter drop-shadow-md">
+            <span class="font-bold text-lg tracking-wide">MCA Attendance</span>
         </div>
-    </nav>
+        <button id="mobile-menu-btn" class="text-secondary hover:text-white focus:outline-none p-1 rounded-md hover:bg-white/10 transition">
+            <i class="ri-menu-line text-2xl"></i>
+        </button>
+    </header>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- RESPONSIVE SIDEBAR: 
-                 1. d-none d-md-block: Hides on mobile, shows normally on desktop 
-                 2. Offcanvas component handles the mobile slide-in menu 
-            -->
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse offcanvas-md offcanvas-start" tabindex="-1" aria-labelledby="sidebarMenuLabel">
+    <div class="flex min-h-screen relative">
+        
+        <!-- Sidebar Backdrop (Mobile only) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity opacity-0 backdrop-blur-sm" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient text-white transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:static md:h-screen flex flex-col shadow-2xl md:shadow-none border-r border-transparent dark:border-slate-800">
+            
+            <!-- Sidebar Header (Desktop) -->
+            <div class="hidden md:flex flex-col items-center justify-center p-6 border-b border-blue-800 dark:border-slate-800">
+                <img src="{{ url_for('static', filename='mca.png') }}" class="w-20 h-20 object-contain mb-3 filter drop-shadow-lg transition-transform hover:scale-105">
+                <h1 class="text-lg font-bold tracking-wide text-center leading-tight">Maranatha<br><span class="text-secondary text-sm">Christian Academy</span></h1>
+            </div>
+
+            <!-- Mobile Sidebar Header -->
+            <div class="md:hidden p-4 border-b border-blue-800 flex justify-between items-center">
+                <span class="font-bold text-lg text-secondary">Menu</span>
+                <button onclick="toggleSidebar()" class="text-white hover:text-secondary">
+                    <i class="ri-close-line text-2xl"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 py-6 overflow-y-auto no-scrollbar space-y-1">
                 
-                <div class="offcanvas-header d-md-none">
-                    <h5 class="offcanvas-title text-white" id="sidebarMenuLabel">Menu</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                        {% if request.endpoint == 'dashboard' %} bg-secondary/20 text-secondary border-l-4 border-secondary {% else %} text-blue-100 hover:bg-white/10 hover:text-white {% endif %}">
+                        <i class="ri-dashboard-line text-lg"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
                 </div>
 
-                <div class="offcanvas-body d-block px-3 pt-3">
-                    <h4 class="mb-4 text-white d-none d-md-block"><i class="bi bi-qr-code-scan"></i> Attendance</h4>
-
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/scan">
-                                <i class="bi bi-upc-scan me-2"></i> Scanner
-                            </a>
-                        </li>
-
-                        <div class="sidebar-heading">Data & Reports</div>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/view_students">
-                                <i class="bi bi-search me-2"></i> Search Records
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/live_feed" target="_blank">
-                                <i class="bi bi-tv me-2"></i> Live Display
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/export_page">
-                                <i class="bi bi-file-earmark-excel me-2"></i> Export Report
-                            </a>
-                        </li>
-
-                        <div class="sidebar-heading">Administration</div>
-
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin">
-                                <i class="bi bi-person-plus-fill me-2"></i> Manage Students
-                            </a>
-                        </li>
-                    </ul>
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('scan') }}" target="_blank" class="flex items-center space-x-3 p-3 rounded-lg text-blue-100 hover:bg-white/10 hover:text-white transition-all duration-200">
+                        <i class="ri-qr-scan-line text-lg"></i>
+                        <span class="font-medium">Scanner</span>
+                    </a>
                 </div>
+
+                <div class="px-6 mt-6 mb-2">
+                    <h3 class="text-xs font-bold text-blue-300 dark:text-gray-400 uppercase tracking-wider">Reports</h3>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('view_students') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                        {% if request.endpoint == 'view_students' %} bg-secondary/20 text-secondary border-l-4 border-secondary {% else %} text-blue-100 hover:bg-white/10 hover:text-white {% endif %}">
+                        <i class="ri-search-line text-lg"></i>
+                        <span class="font-medium">Search Records</span>
+                    </a>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('live_feed') }}" target="_blank" class="flex items-center space-x-3 p-3 rounded-lg text-blue-100 hover:bg-white/10 hover:text-white transition-all duration-200">
+                        <i class="ri-tv-line text-lg"></i>
+                        <span class="font-medium">Live Display</span>
+                        <i class="ri-external-link-line ml-auto text-xs opacity-50"></i>
+                    </a>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('export_page') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                        {% if request.endpoint == 'export_page' %} bg-secondary/20 text-secondary border-l-4 border-secondary {% else %} text-blue-100 hover:bg-white/10 hover:text-white {% endif %}">
+                        <i class="ri-file-download-line text-lg"></i>
+                        <span class="font-medium">Export Report</span>
+                    </a>
+                </div>
+
+                <div class="px-6 mt-6 mb-2">
+                    <h3 class="text-xs font-bold text-blue-300 dark:text-gray-400 uppercase tracking-wider">Admin</h3>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('admin') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                        {% if request.endpoint == 'admin' or request.endpoint == 'edit_student' %} bg-secondary/20 text-secondary border-l-4 border-secondary {% else %} text-blue-100 hover:bg-white/10 hover:text-white {% endif %}">
+                        <i class="ri-group-line text-lg"></i>
+                        <span class="font-medium">Manage Students</span>
+                    </a>
+                </div>
+
+                <!-- PERMISSION BASED LINKS -->
+                {% if user_role == 'admin' or can_settings or can_backup %}
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('settings') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                        {% if request.endpoint == 'settings' %} bg-secondary/20 text-secondary border-l-4 border-secondary {% else %} text-blue-100 hover:bg-white/10 hover:text-white {% endif %}">
+                        <i class="ri-settings-4-line text-lg"></i>
+                        <span class="font-medium">Settings</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                {% if user_role == 'admin' %}
+                <div class="px-6 mt-6 mb-2">
+                    <h3 class="text-xs font-bold text-blue-300 dark:text-gray-400 uppercase tracking-wider">System</h3>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('manage_users') }}" class="flex items-center space-x-3 p-3 rounded-lg text-blue-100 hover:bg-white/10 hover:text-white transition">
+                        <i class="ri-shield-user-line text-lg"></i>
+                        <span class="font-medium">Users</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- THEME TOGGLE (Accessible to ALL) -->
+                <div class="px-4 mb-2 mt-4 border-t border-blue-800 dark:border-slate-800 pt-4">
+                    <button onclick="toggleTheme()" class="w-full flex items-center space-x-3 p-3 rounded-lg text-blue-100 hover:bg-white/10 hover:text-white transition cursor-pointer">
+                        <i class="ri-moon-line text-lg dark:hidden"></i>
+                        <i class="ri-sun-line text-lg hidden dark:block"></i>
+                        <span class="font-medium dark:hidden">Dark Mode</span>
+                        <span class="font-medium hidden dark:block">Light Mode</span>
+                    </button>
+                </div>
+
+                <div class="px-4 mb-2">
+                    <a href="{{ url_for('logout') }}" class="flex items-center space-x-3 p-3 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-white transition border border-transparent hover:border-red-400">
+                        <i class="ri-logout-box-line text-lg"></i>
+                        <span class="font-medium">Logout</span>
+                    </a>
+                </div>
+
             </nav>
+            
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-blue-800 dark:border-slate-800 text-xs text-blue-200 text-center">
+                <div class="mb-1">
+                    Logged in as: <span class="text-secondary font-bold">{{ session.get('username') }}</span>
+                </div>
+                &copy; {{ date }} MCA System
+            </div>
+        </aside>
 
-            <!-- MAIN CONTENT AREA -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 pt-4">
+        <!-- Main Content Wrapper -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden">
+            <div class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-dark p-4 md:p-8 transition-colors duration-300">
                 {% block content %}{% endblock %}
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // GLOBAL THEME TOGGLE FUNCTION
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        menuBtn.addEventListener('click', toggleSidebar);
+    </script>
 </body>
 </html>

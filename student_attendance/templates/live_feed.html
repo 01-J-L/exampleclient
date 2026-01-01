@@ -1,204 +1,172 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Attendance Feed</title>
+    <title>MCA Live Feed</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e3a8a', 
+                        secondary: '#fbbf24', 
+                        dark: '#0f172a', 
+                        surface: '#1e293b'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    animation: { 'scan': 'scan 2s linear infinite' },
+                    keyframes: { scan: { '0%': { top: '0%' }, '100%': { top: '100%' } } }
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            background-color: #f0f2f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh; /* changed height to min-height */
-            margin: 0;
-            padding: 20px; /* Add padding for small screens */
-            box-sizing: border-box;
-        }
-
-        /* RESPONSIVE CARD CONTAINER */
-        .id-card {
-            background: white;
-            width: 100%;           /* Fluid width */
-            max-width: 600px;      /* Maximum width */
-            min-height: 350px;     /* Minimum height */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* HEADER */
-        .header {
-            display: flex;
-            height: 70px;
-            flex-shrink: 0; /* Prevent shrinking */
-        }
-
-        .header-gold {
-            background-color: #C19929;
-            width: 15%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .header-black {
-            background-color: #111;
-            width: 85%;
-            color: white;
-            display: flex;
-            align-items: center;
-            padding-left: 20px;
-            font-size: clamp(18px, 4vw, 24px); /* Adaptive Font Size */
-            font-weight: 300;
-            letter-spacing: 1px;
-        }
-
-        /* CONTENT AREA */
-        .content {
-            display: flex;
-            flex: 1;
-            padding: 30px;
-        }
-
-        /* Photo Area */
-        .photo-area {
-            width: 40%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
-
-        .student-photo {
-            width: 100%;
-            max-width: 180px; /* Don't get too big */
-            aspect-ratio: 1/1; /* Keep square ratio */
-            object-fit: cover;
-            border-radius: 50%;
-            border: 5px solid #f0f0f0;
-        }
-
-        /* Info Area */
-        .info-area {
-            width: 60%;
-            padding-left: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        /* Adaptive Typography using clamp() */
-        .title-label {
-            font-size: clamp(20px, 4vw, 28px);
-            font-weight: 900;
-            text-transform: uppercase;
-            color: #000;
-            margin-bottom: 15px;
-            letter-spacing: 1px;
-        }
-
-        .student-name {
-            font-size: clamp(22px, 5vw, 32px);
-            font-weight: 400;
-            color: #222;
-            margin-bottom: 20px;
-            line-height: 1.1;
-        }
-
-        .student-id {
-            font-size: clamp(18px, 3vw, 24px);
-            color: #333;
-            font-weight: 400;
-            margin-bottom: 5px;
-        }
-        
-        .scan-time {
-            font-size: clamp(14px, 2.5vw, 16px);
-            color: #C19929;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-top: 10px;
-        }
-
-        /* MEDIA QUERY FOR MOBILE PHONES */
-        @media (max-width: 576px) {
-            .content {
-                flex-direction: column; /* Stack vertically */
-                align-items: center;
-                text-align: center;
-                padding: 20px;
-            }
-
-            .photo-area, .info-area {
-                width: 100%;
-                padding-left: 0;
-            }
-
-            .photo-area {
-                margin-bottom: 20px;
-            }
-
-            .student-photo {
-                max-width: 140px; /* Smaller photo on mobile */
-            }
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .fade-enter { opacity: 0; transform: translateY(10px); }
+        .fade-active { opacity: 1; transform: translateY(0); transition: all 0.4s ease-in-out; }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 dark:bg-dark h-screen w-screen overflow-hidden flex flex-col relative text-gray-800 dark:text-slate-200 transition-colors duration-300">
 
-    <div class="id-card" id="card-display">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-gold">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/></svg>
+    <!-- Header -->
+    <header class="w-full z-20 px-6 py-4 flex justify-between items-center backdrop-blur-sm border-b border-gray-200 dark:border-white/5 bg-white/50 dark:bg-dark/50">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
+                <img src="{{ url_for('static', filename='mca.png') }}" class="w-full h-full object-contain">
             </div>
-            <div class="header-black">
-                SCHOOL NAME
+            <div class="hidden sm:block">
+                <h1 class="font-bold text-lg tracking-tight leading-tight text-primary dark:text-white">Maranatha Christian Academy</h1>
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+                    </span>
+                    <p class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest font-bold">Gate Monitor</p>
+                </div>
             </div>
         </div>
+        <div class="text-right">
+            <p class="text-2xl font-mono font-bold text-primary dark:text-white tracking-wide" id="clock">00:00:00</p>
+            <p class="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wider font-medium" id="date">Loading...</p>
+        </div>
+    </header>
 
-        <!-- Content -->
-        <div class="content">
-            <div class="photo-area">
-                <img src="https://ui-avatars.com/api/?name=Waiting&background=random" class="student-photo" id="photo">
+    <!-- Main Content -->
+    <div class="flex-1 flex items-center justify-center p-4 md:p-8 z-10 relative">
+        
+        <div id="card-display" class="w-full max-w-sm md:max-w-5xl bg-white dark:bg-surface/60 backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row transition-all duration-500 min-h-[550px] md:min-h-[400px]">
+            
+            <!-- LEFT: Photo Side -->
+            <div class="w-full md:w-5/12 relative bg-primary/5 dark:bg-slate-900/50 flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-gray-200 dark:border-white/5">
+                <div class="relative w-48 h-48 md:w-64 md:h-64 rounded-full p-1 bg-gradient-to-tr from-primary via-white/20 to-secondary shadow-2xl">
+                    <div class="w-full h-full rounded-full overflow-hidden bg-gray-200 dark:bg-slate-800 relative group">
+                        <img src="https://ui-avatars.com/api/?name=Waiting&background=1e3a8a&color=fff&size=400" 
+                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                             id="photo">
+                        <!-- Scanning Overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/40 to-transparent w-full h-[10%] animate-scan opacity-50 pointer-events-none"></div>
+                    </div>
+                </div>
             </div>
-            <div class="info-area">
-                <div class="title-label">STUDENT</div>
-                <div class="student-name" id="name">Waiting...</div>
-                <div class="student-id" id="details">---</div>
-                <div class="scan-time" id="status">---</div>
+
+            <!-- RIGHT: Info Side -->
+            <div class="w-full md:w-7/12 p-6 md:p-12 flex flex-col justify-center text-center md:text-left relative">
+                
+                <div class="mb-6 flex justify-center md:justify-start">
+                    <div id="status-badge" class="px-6 py-2 rounded-full text-sm md:text-base font-bold bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-white/5 shadow-sm transition-all duration-300">
+                        <span class="animate-pulse">Waiting for Scan...</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2 fade-active" id="info-container">
+                    <div class="overflow-hidden">
+                        <p class="text-xs text-primary dark:text-secondary font-bold uppercase tracking-[0.2em] mb-2 opacity-80">Student Name</p>
+                        <h2 id="name" class="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white leading-tight tracking-tight truncate">
+                            Ready...
+                        </h2>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <p class="text-xs text-primary/70 dark:text-slate-400 font-bold uppercase tracking-[0.2em] mb-1 opacity-80">Details</p>
+                        <h3 id="details" class="text-xl md:text-2xl text-gray-600 dark:text-slate-300 font-medium">---</h3>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-8 md:pt-12 border-t border-gray-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-gray-100 dark:bg-slate-800 rounded-lg text-gray-500 dark:text-slate-400">
+                            <i class="ri-time-line text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold">Log Time</p>
+                            <span id="scan-timestamp" class="text-2xl font-mono font-bold text-gray-800 dark:text-white">--:--</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 
     <script>
-        let lastId = null;
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        let lastSignature = null;
+        
         function fetchLatest() {
             fetch('/api/latest_attendee')
             .then(response => response.json())
             .then(data => {
                 if (data.found) {
-                    document.getElementById('name').innerText = data.name;
-                    document.getElementById('details').innerText = data.grade + " - " + data.section;
-                    document.getElementById('status').innerText = data.status + " AT " + data.time;
-                    if (lastId !== data.id) {
-                        document.getElementById('photo').src = `https://ui-avatars.com/api/?name=${data.name}&background=0D8ABC&color=fff&size=200`;
-                        lastId = data.id;
-                        const card = document.getElementById('card-display');
-                        card.style.opacity = '0.8';
-                        setTimeout(() => card.style.opacity = '1', 200);
+                    const currentSignature = data.name + data.time + data.status;
+                    if (document.getElementById('name').innerText === "Ready..." || lastSignature !== currentSignature) {
+                        lastSignature = currentSignature;
+                        
+                        document.getElementById('name').innerText = data.name;
+                        document.getElementById('details').innerText = `${data.grade} - ${data.section}`;
+                        document.getElementById('scan-timestamp').innerText = data.time;
+                        
+                        const photoEl = document.getElementById('photo');
+                        if (data.photo_url) photoEl.src = data.photo_url;
+                        else photoEl.src = `https://ui-avatars.com/api/?name=${data.name}&background=1e3a8a&color=fff&size=512`;
+
+                        const badgeEl = document.getElementById('status-badge');
+                        badgeEl.className = "px-6 py-2 rounded-full text-sm md:text-base font-bold border shadow-lg transition-all duration-300 transform scale-105";
+                        
+                        if (data.status.includes("IN")) {
+                            badgeEl.classList.add("bg-green-100", "dark:bg-green-500/20", "text-green-700", "dark:text-green-300", "border-green-200", "dark:border-green-500/50");
+                            badgeEl.innerHTML = `<div class="flex items-center gap-2"><i class="ri-login-circle-fill text-lg"></i> CHECKED IN</div>`;
+                        } else {
+                            badgeEl.classList.add("bg-orange-100", "dark:bg-orange-500/20", "text-orange-700", "dark:text-orange-300", "border-orange-200", "dark:border-orange-500/50");
+                            badgeEl.innerHTML = `<div class="flex items-center gap-2"><i class="ri-logout-circle-fill text-lg"></i> CHECKED OUT</div>`;
+                        }
+
+                        const container = document.getElementById('info-container');
+                        container.classList.remove('fade-active');
+                        container.classList.add('fade-enter');
+                        setTimeout(() => { container.classList.remove('fade-enter'); container.classList.add('fade-active'); }, 50);
                     }
                 }
             })
-            .catch(err => console.error(err));
+            .catch(err => console.error("Polling Error:", err));
         }
-        setInterval(fetchLatest, 2000);
-        fetchLatest();
+        setInterval(fetchLatest, 1000);
     </script>
 </body>
 </html>

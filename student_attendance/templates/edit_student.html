@@ -1,74 +1,98 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <h2 class="mb-4">Edit Student Details</h2>
-            
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    Editing: {{ student.name }}
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <div class="row g-3">
-                            <!-- Name -->
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" name="name" class="form-control" value="{{ student.name }}" required>
-                            </div>
-                            
-                            <!-- Grade -->
-                            <div class="col-md-3">
-                                <label class="form-label">Grade Level</label>
-                                <select name="grade" class="form-select" required>
-                                    <option value="{{ student.grade }}" selected>{{ student.grade }} (Current)</option>
-                                    <option value="Kindergarten">Kindergarten</option>
-                                    {% for i in range(1, 13) %}
-                                    <option value="Grade {{ i }}">Grade {{ i }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <!-- Section -->
-                            <div class="col-md-3">
-                                <label class="form-label">Section</label>
-                                <input type="text" name="section" class="form-control" value="{{ student.section }}" required>
-                            </div>
-
-                            <!-- Parent Info -->
-                            <div class="col-md-6">
-                                <label class="form-label">Parent/Guardian Name</label>
-                                <input type="text" name="parent" class="form-control" value="{{ student.parent_name }}" required>
-                            </div>
-
-                            <!-- Contact -->
-                            <div class="col-md-6">
-                                <label class="form-label">Contact Number</label>
-                                <input type="text" name="contact" class="form-control" value="{{ student.contact_number }}" required>
-                            </div>
-
-                            <!-- Email -->
-                            <div class="col-md-6">
-                                <label class="form-label">Email Address</label>
-                                <input type="email" name="email" class="form-control" value="{{ student.email or '' }}">
-                            </div>
-
-                            <!-- Address -->
-                            <div class="col-md-6">
-                                <label class="form-label">Home Address</label>
-                                <input type="text" name="address" class="form-control" value="{{ student.address or '' }}">
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="col-12 mt-4 d-flex justify-content-between">
-                                <a href="{{ url_for('admin') }}" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-success">Save Changes</button>
-                            </div>
+<div class="max-w-4xl mx-auto mt-4 md:mt-8">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
+    </div>
+    
+    <div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="bg-gray-50 dark:bg-slate-800/50 px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+            <h5 class="font-bold text-gray-800 dark:text-slate-200">{{ student.name }}</h5>
+        </div>
+        <div class="p-6 md:p-8">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="md:col-span-2 flex items-center gap-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-dashed border-gray-300 dark:border-slate-600">
+                        <div class="w-24 h-24 rounded-full bg-white dark:bg-slate-700 overflow-hidden border-4 border-white dark:border-slate-600 shadow-sm flex-shrink-0">
+                            {% if student.photo_filename %}
+                            <img src="{{ url_for('static', filename='uploads/' + student.photo_filename) }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ri-user-fill text-3xl"></i></div>
+                            {% endif %}
                         </div>
-                    </form>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Update Photo</label>
+                            <input type="file" name="photo" accept="image/*" class="w-full text-sm text-gray-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-primary file:text-white hover:file:bg-blue-600">
+                        </div>
+                    </div>
+
+                    <!-- INPUTS WITH DARK MODE CLASSES -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Academic Term</label>
+                        <select name="academic_term" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none">
+                            {% for term in global_terms %}
+                            <option value="{{ term.name }}" {% if student.academic_term == term.name %}selected{% endif %}>{{ term.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Student ID / LRN</label>
+                        <input type="text" name="student_number" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.student_number }}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Full Name</label>
+                        <input type="text" name="name" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.name }}" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Grade</label>
+                        <select name="grade" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" required>
+                            {% for g in global_grades %}
+                            <option value="{{ g.name }}" {% if student.grade == g.name %}selected{% endif %}>{{ g.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Section</label>
+                        <select name="section" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" required>
+                            {% for s in global_sections %}
+                            <option value="{{ s.name }}" {% if student.section == s.name %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Parent Name</label>
+                        <input type="text" name="parent" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.parent_name }}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Contact</label>
+                        <input type="text" name="contact" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.contact_number }}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Email</label>
+                        <input type="email" name="email" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.email or '' }}">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Address</label>
+                        <input type="text" name="address" class="w-full rounded-lg border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white border px-4 py-2.5 outline-none" value="{{ student.address or '' }}">
+                    </div>
                 </div>
-            </div>
+
+                <div class="mt-8 flex justify-end gap-3">
+                    <a href="{{ url_for('admin') }}" class="px-6 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-slate-300 font-bold hover:bg-gray-50 dark:hover:bg-slate-800 transition">Cancel</a>
+                    <button type="submit" class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition shadow-md">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

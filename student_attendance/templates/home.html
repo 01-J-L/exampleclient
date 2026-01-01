@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System - MCA</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <script>
+        // THEME LOGIC: Check LocalStorage OR System Preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#1e3a8a', secondary: '#fbbf24', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-slate-950 min-h-screen flex items-center justify-center p-4 sm:p-6 transition-colors duration-300">
+    
+    <!-- Main Container -->
+    <div class="max-w-5xl w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] md:min-h-[500px]">
+        
+        <!-- Left Side (Visual Banner) -->
+        <div class="md:w-1/2 bg-primary relative overflow-hidden p-8 sm:p-12 flex flex-col justify-center items-start text-white group">
+            
+            <!-- Animated Background Gradient -->
+            <div class="absolute inset-0 bg-gradient-to-br from-primary via-blue-700 to-indigo-900 opacity-90 z-0"></div>
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-secondary/20 rounded-full blur-[80px]"></div>
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-400/20 rounded-full blur-[80px]"></div>
+
+            <div class="relative z-10 w-full">
+                <!-- Logo/Icon -->
+                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-inner border border-white/20 transform transition-transform group-hover:rotate-3 group-hover:scale-105">
+                    <img src="{{ url_for('static', filename='mca.png') }}" class="w-12 h-12 sm:w-16 sm:h-16 object-contain filter drop-shadow-md">
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 leading-tight tracking-tight">
+                    Smart<br><span class="text-secondary">Attendance</span>
+                </h1>
+                
+                <p class="text-blue-100 text-sm sm:text-base lg:text-lg leading-relaxed mb-8 sm:mb-10 max-w-sm">
+                    Secure, real-time campus monitoring for Maranatha Christian Academy. Automated tracking for students and staff.
+                </p>
+
+                <!-- Public Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <a href="{{ url_for('live_feed') }}" class="flex-1 sm:flex-none text-center bg-white text-primary px-6 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="ri-tv-line text-lg"></i> Live View
+                    </a>
+                    <a href="{{ url_for('scan') }}" class="flex-1 sm:flex-none text-center bg-secondary/90 text-primary px-6 py-3.5 rounded-xl font-bold hover:bg-secondary transition shadow-lg flex items-center justify-center gap-2 border border-secondary">
+                        <i class="ri-qr-scan-2-line text-lg"></i> Scanner
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side (Login Action) -->
+        <div class="md:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center items-center text-center bg-white dark:bg-slate-900">
+            
+            <div class="w-full max-w-xs sm:max-w-sm mx-auto">
+                <div class="w-14 h-14 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400 dark:text-slate-500">
+                    <i class="ri-shield-user-line text-2xl"></i>
+                </div>
+
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">Admin Access</h2>
+                <p class="text-gray-500 dark:text-slate-400 text-sm sm:text-base mb-8 sm:mb-10">
+                    Restricted area for school administrators and staff management.
+                </p>
+                
+                <a href="{{ url_for('login') }}" class="group w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-4 rounded-xl font-bold text-sm sm:text-base hover:bg-black dark:hover:bg-gray-100 transition-all shadow-xl shadow-gray-900/10 flex items-center justify-center gap-3 transform hover:-translate-y-1">
+                    <span>Secure Login</span>
+                    <i class="ri-arrow-right-line transition-transform group-hover:translate-x-1"></i>
+                </a>
+                
+                <div class="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 w-full">
+                    <div class="flex justify-center items-center gap-2 text-xs text-gray-400 dark:text-slate-600 font-medium uppercase tracking-wider">
+                        <i class="ri-lock-2-line"></i> Secure System v2.0
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

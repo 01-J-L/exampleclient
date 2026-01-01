@@ -1,133 +1,368 @@
-
 {% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid px-0"> <!-- px-0 to maximize space on small screens -->
-    <h2 class="mb-4">Manage Students</h2>
-
-    <!-- Bulk Import/Export Section -->
-    <div class="card mb-4 shadow-sm border-primary">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Bulk Actions</h5>
+<!-- FLASH MESSAGES -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for category, message in messages %}
+        <div class="p-4 rounded-xl border flex items-start md:items-center shadow-sm 
+            {% if category == 'success' %} bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300
+            {% elif category == 'error' %} bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300
+            {% else %} bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 {% endif %}">
+            <i class="ri-{% if category=='success' %}checkbox-circle{% elif category=='error' %}error-warning{% else %}information{% endif %}-fill text-xl mr-3 mt-0.5 md:mt-0"></i>
+            <span class="font-bold text-sm md:text-base break-words">{{ message }}</span>
         </div>
-        <div class="card-body">
-            <div class="row g-3 align-items-center">
-                <!-- Import Form -->
-                <div class="col-lg-8 border-end-lg">
-                    <form action="/import_students" method="POST" enctype="multipart/form-data" class="row g-2">
-                        <div class="col-12 col-md-auto">
-                            <label class="col-form-label fw-bold">Import:</label>
-                        </div>
-                        <div class="col-12 col-md">
-                            <input type="file" name="file" class="form-control" accept=".xlsx, .xls" required>
-                        </div>
-                        <div class="col-12 col-md-auto">
-                            <button type="submit" class="btn btn-success w-100">Upload</button>
-                        </div>
-                        <div class="col-12 col-md-auto">
-                            <a href="/download_template" class="btn btn-outline-secondary btn-sm w-100">
-                                <i class="bi bi-download"></i> Template
-                            </a>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Export Button -->
-                <div class="col-lg-4 text-center mt-3 mt-lg-0">
-                    <a href="/export_students" class="btn btn-primary w-100">
-                        <i class="bi bi-cloud-download"></i> Export All
-                    </a>
-                </div>
-            </div>
-        </div>
+      {% endfor %}
     </div>
+  {% endif %}
+{% endwith %}
 
-    <!-- Add Single Student Form -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Add Single Student</h5>
+<div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Administration</h2>
+    <p class="text-gray-500 dark:text-slate-400 text-sm">Manage student database, uploads, and profiles.</p>
+</div>
+
+<!-- ========================================== -->
+<!-- BULK IMPORT WIDGET                         -->
+<!-- ========================================== -->
+<div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-8 overflow-hidden">
+    <div class="bg-gray-50/50 dark:bg-slate-800/50 px-4 md:px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center">
+            <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center mr-3 text-green-600 dark:text-green-400 shrink-0">
+                <i class="ri-file-excel-fill"></i>
+            </div>
+            <h5 class="font-bold text-gray-800 dark:text-slate-200 text-sm md:text-base">Bulk Import (Excel + Photos)</h5>
         </div>
-        <div class="card-body">
-             <form method="POST" action="{{ url_for('admin') }}">
-                 <div class="row g-3">
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required>
+        <a href="{{ url_for('download_template') }}" class="w-full sm:w-auto text-center text-xs font-bold text-primary hover:underline bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-3 py-2 rounded-lg shadow-sm transition-colors dark:text-slate-300">
+            <i class="ri-download-line mr-1"></i> Download Template
+        </a>
+    </div>
+    
+    <div class="p-4 md:p-6">
+        <form action="{{ url_for('import_students') }}" method="POST" enctype="multipart/form-data" id="bulkForm">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                
+                <!-- LEFT: Excel Upload & Submit -->
+                <div class="flex flex-col justify-between h-full space-y-4 order-2 xl:order-1">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Step 1: Upload Excel File</label>
+                        <input type="file" name="file" accept=".xlsx, .xls" required 
+                               class="block w-full text-xs md:text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs md:file:text-sm file:font-bold file:bg-primary file:text-white hover:file:bg-blue-600 border border-gray-200 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 cursor-pointer transition-all">
+                        <p class="text-[10px] text-gray-400 dark:text-slate-500 mt-2 leading-relaxed">
+                            <i class="ri-information-fill"></i> Ensure "Student ID", "Academic Term", and "Image Filename" columns are filled.
+                        </p>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Grade <span class="text-danger">*</span></label>
-                        <select name="grade" class="form-select" required>
-                             <option value="">Select...</option>
-                             {% for i in range(1, 13) %}
-                             <option value="Grade {{ i }}">Gr {{ i }}</option>
-                             {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Section <span class="text-danger">*</span></label>
-                        <input type="text" name="section" class="form-control" required>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Contact <span class="text-danger">*</span></label>
-                        <input type="text" name="contact" class="form-control" required>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Parent <span class="text-danger">*</span></label>
-                        <input type="text" name="parent" class="form-control" required>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-control">
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Address</label>
-                        <input type="text" name="address" class="form-control">
-                    </div>
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-dark w-100">Add Student</button>
+
+                    <div class="pt-2 xl:pt-4 xl:mt-auto">
+                        <button type="submit" id="submitBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 md:py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-green-500/20 flex items-center justify-center group text-sm md:text-base">
+                            <span class="mr-2">Start Import Process</span>
+                            <i class="ri-arrow-right-line transition-transform group-hover:translate-x-1"></i>
+                        </button>
                     </div>
                 </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- Student List Table -->
-    <h4 class="mb-3">Registered Students</h4>
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <!-- table-responsive is KEY for mobile tables -->
-            <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0 align-middle">
-                    <thead class="table-dark text-nowrap">
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Class</th>
-                            <th>Parent</th>
-                            <th>Contact</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in students %}
-                        <tr>
-                            <td>{{ s.id }}</td>
-                            <td class="fw-bold text-nowrap">{{ s.name }}</td>
-                            <td class="text-nowrap">{{ s.grade }} - {{ s.section }}</td>
-                            <td class="text-nowrap">{{ s.parent_name }}</td>
-                            <td>{{ s.contact_number }}</td>
-                            <td class="text-center text-nowrap">
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('edit_student', student_id=s.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                    <a href="{{ url_for('generate_qr', student_id=s.id) }}" class="btn btn-sm btn-dark">QR</a>
-                                    <a href="{{ url_for('delete_student', student_id=s.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Del</a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <!-- RIGHT: Drag & Drop Photos (Accumulative) -->
+                <div class="flex flex-col h-full order-1 xl:order-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">
+                        Step 2: Upload Photos 
+                        <span id="total-count" class="ml-2 text-primary bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full hidden text-[10px]">0 files</span>
+                    </label>
+                    
+                    <div class="flex-1 flex flex-col border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-800 overflow-hidden relative min-h-[200px] md:min-h-[250px]" id="drop-area">
+                        <input type="file" multiple accept="image/*" id="fileInput" class="hidden">
+                        
+                        <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-slate-700 transition-colors" onclick="document.getElementById('fileInput').click()">
+                            <div class="w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-slate-700 rounded-full shadow-sm flex items-center justify-center mb-3 text-primary text-xl md:text-2xl">
+                                <i class="ri-image-add-line"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-gray-700 dark:text-slate-200">Drag photos here</h3>
+                            <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">or click to browse (accumulative)</p>
+                        </div>
+
+                        <div id="file-list-container" class="absolute inset-0 flex flex-col bg-white dark:bg-dark-surface hidden z-10">
+                            <div class="p-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex justify-between items-center shrink-0">
+                                <span class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Queue</span>
+                                <button type="button" onclick="document.getElementById('fileInput').click()" class="text-xs bg-primary text-white px-3 py-1 rounded-md hover:bg-blue-600 transition">
+                                    <i class="ri-add-line mr-1"></i> Add More
+                                </button>
+                            </div>
+                            <div id="file-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+                        </div>
+
+                        <input type="file" name="bulk_images" multiple accept="image/*" id="realFormInput" class="hidden">
+                    </div>
+                    <p class="text-[10px] text-gray-400 dark:text-slate-500 mt-2 text-center hidden md:block">
+                        <i class="ri-drag-move-line"></i> Drag & drop multiple times to accumulate files.
+                    </p>
+                </div>
+
             </div>
-        </div>
+        </form>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- SINGLE ENROLL FORM                         -->
+<!-- ========================================== -->
+<div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-8">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700">
+        <h5 class="font-bold text-gray-800 dark:text-slate-200">Enroll Single Student</h5>
+    </div>
+    <div class="p-6">
+         <form method="POST" action="{{ url_for('admin') }}" enctype="multipart/form-data">
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                
+                <!-- ACADEMIC TERM -->
+                <div class="lg:col-span-4">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Target Academic Term</label>
+                    <div class="w-full rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-100 dark:bg-slate-800 px-3 py-2.5 text-gray-600 dark:text-slate-300 font-bold">
+                        {% if current_term %}
+                            {{ current_term.name }} (Active)
+                            <input type="hidden" name="academic_term" value="{{ current_term.name }}">
+                        {% else %}
+                            <span class="text-red-500">No Active Term Set in Settings!</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- FORM FIELDS -->
+                <!-- Note: Adding dark: classes to inputs -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Student ID / LRN <span class="text-red-500">*</span></label>
+                    <input type="text" name="student_number" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white" placeholder="e.g. 2023-1001" required>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white" required>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Student Photo</label>
+                    <input type="file" name="photo" accept="image/*" class="w-full text-xs md:text-sm text-gray-500 dark:text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-blue-600 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Grade <span class="text-red-500">*</span></label>
+                    <select name="grade" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none bg-white dark:bg-slate-800 dark:text-white" required>
+                         <option value="">Select Level</option>
+                         {% for g in global_grades %}
+                         <option value="{{ g.name }}">{{ g.name }}</option>
+                         {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Section <span class="text-red-500">*</span></label>
+                    <select name="section" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none bg-white dark:bg-slate-800 dark:text-white" required>
+                         <option value="">Select Section</option>
+                         {% for s in global_sections %}
+                         <option value="{{ s.name }}">{{ s.name }}</option>
+                         {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Parent Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="parent" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Contact No. <span class="text-red-500">*</span></label>
+                    <input type="text" name="contact" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white" required>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Email</label>
+                    <input type="email" name="email" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white">
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Address</label>
+                    <input type="text" name="address" class="w-full rounded-lg border-gray-300 dark:border-slate-600 border px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:text-white">
+                </div>
+            </div>
+            <div class="mt-6 pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+                <button type="submit" class="w-full sm:w-auto bg-primary hover:bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl transition-colors shadow-md">
+                    Enroll / Update Student
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- STUDENT DIRECTORY                          -->
+<!-- ========================================== -->
+<div class="bg-white dark:bg-dark-surface rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h5 class="font-bold text-gray-800 dark:text-slate-200 flex items-center flex-wrap gap-2">
+                Student Directory 
+                {% if current_term %}
+                <span class="text-[10px] sm:text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 whitespace-nowrap">
+                    Active Year: {{ current_term.name }}
+                </span>
+                {% endif %}
+            </h5>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+            <a href="{{ url_for('archive_page') }}" class="flex-1 md:flex-none text-center text-xs font-bold text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 transition-colors">
+                <i class="ri-archive-line mr-1"></i> Archive
+            </a>
+            <a href="{{ url_for('view_students') }}" class="flex-1 md:flex-none text-center text-xs font-bold text-white bg-primary px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                <i class="ri-search-line mr-1"></i> View All
+            </a>
+            <a href="{{ url_for('export_students') }}" class="flex-1 md:flex-none text-center text-xs font-bold text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors">
+                <i class="ri-database-2-line mr-1"></i> Export Data
+            </a>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="overflow-x-auto">
+        <table class="w-full whitespace-nowrap">
+            <thead class="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 dark:text-slate-500 uppercase">Profile</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 dark:text-slate-500 uppercase">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 dark:text-slate-500 uppercase">Parent Info</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-400 dark:text-slate-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                {% for s in students %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden flex-shrink-0 border border-gray-300 dark:border-slate-600">
+                                {% if s.photo_filename %}
+                                    <img src="{{ url_for('static', filename='uploads/' + s.photo_filename) }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ri-user-fill"></i></div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-gray-900 dark:text-slate-200">{{ s.name }}</div>
+                                <div class="text-xs text-gray-500 dark:text-slate-500 font-mono">ID: {{ s.student_number }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300">
+                            {{ s.grade }} - {{ s.section }}
+                        </span>
+                        <div class="text-[10px] text-gray-400 dark:text-slate-500 mt-1">{{ s.academic_term }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-900 dark:text-slate-200">{{ s.parent_name }}</div>
+                        <div class="text-xs text-gray-500 dark:text-slate-500">{{ s.contact_number }}</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex justify-center space-x-2">
+                            <a href="{{ url_for('edit_student', student_id=s.id) }}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition">
+                                <i class="ri-pencil-fill"></i>
+                            </a>
+                            <a href="{{ url_for('generate_qr', student_id=s.id) }}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">
+                                <i class="ri-qr-code-fill"></i>
+                            </a>
+                            <a href="{{ url_for('archive_student', student_id=s.id) }}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition" onclick="return confirm('Move to Archive?')">
+                                <i class="ri-delete-bin-line"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="p-8 text-center text-gray-400 dark:text-slate-500">
+                        No students enrolled in the current active school year.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="p-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-center">
+        <a href="{{ url_for('view_students') }}" class="text-xs font-bold text-primary hover:underline">
+            View All Students &rarr;
+        </a>
+    </div>
+</div>
+
+<script>
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('fileInput'); 
+    const realFormInput = document.getElementById('realFormInput'); 
+    const placeholder = document.getElementById('placeholder');
+    const listContainer = document.getElementById('file-list-container');
+    const fileList = document.getElementById('file-list');
+    const totalCount = document.getElementById('total-count');
+
+    let accumulatedFiles = [];
+
+    // Drag Effects
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dropArea.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-slate-700');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dropArea.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-slate-700');
+        }, false);
+    });
+
+    dropArea.addEventListener('drop', (e) => { handleNewFiles(e.dataTransfer.files); });
+    fileInput.addEventListener('change', function() { handleNewFiles(this.files); this.value = ''; });
+
+    function handleNewFiles(files) {
+        if (!files || files.length === 0) return;
+        accumulatedFiles = [...accumulatedFiles, ...Array.from(files)];
+        updateUI();
+        syncToRealInput();
+    }
+
+    function removeFile(index) {
+        accumulatedFiles.splice(index, 1);
+        updateUI();
+        syncToRealInput();
+    }
+
+    function updateUI() {
+        if (accumulatedFiles.length > 0) {
+            placeholder.classList.add('hidden');
+            listContainer.classList.remove('hidden');
+            totalCount.classList.remove('hidden');
+            totalCount.innerText = `${accumulatedFiles.length} files`;
+            
+            fileList.innerHTML = '';
+            accumulatedFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-700 rounded-lg text-xs text-gray-700 dark:text-slate-300 border border-gray-100 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-600 group";
+                div.innerHTML = `
+                    <div class="flex items-center overflow-hidden mr-2">
+                        <i class="ri-image-line text-blue-500 mr-2"></i>
+                        <span class="truncate font-medium">${file.name}</span>
+                        <span class="text-gray-400 ml-2 whitespace-nowrap text-[10px]">${(file.size / 1024).toFixed(0)}KB</span>
+                    </div>
+                    <button type="button" onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 p-1 rounded-md transition-colors">
+                        <i class="ri-close-line text-lg font-bold"></i>
+                    </button>
+                `;
+                fileList.appendChild(div);
+            });
+        } else {
+            placeholder.classList.remove('hidden');
+            listContainer.classList.add('hidden');
+            totalCount.classList.add('hidden');
+        }
+    }
+
+    function syncToRealInput() {
+        const dataTransfer = new DataTransfer();
+        accumulatedFiles.forEach(file => dataTransfer.items.add(file));
+        realFormInput.files = dataTransfer.files;
+    }
+</script>
 {% endblock %}

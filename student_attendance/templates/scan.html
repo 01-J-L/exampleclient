@@ -1,64 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCA Scanner</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
 
-{% extends 'base.html' %}
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6 text-center">
-        <h3 class="mb-4">Scan QR Code</h3>
-        
-        <div class="card shadow-sm">
-            <div class="card-body p-2">
-                <!-- ID "reader" needs to be fluid -->
-                <div id="reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#1e3a8a', secondary: '#fbbf24', dark: '#0f172a' },
+                    animation: { 'scan': 'scan 2s linear infinite' },
+                    keyframes: { scan: { '0%': { top: '0%' }, '100%': { top: '100%' } } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #reader__dashboard_section_csr span, #reader__dashboard_section_swaplink { display: none !important; }
+        #reader button { background-color: #1e3a8a; color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        #reader button:hover { background-color: #172554; }
+        #reader select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 10px; width: 100%; color: black; }
+        video { border-radius: 1rem; object-fit: cover; width: 100% !important; height: 100% !important; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg p-1">
+                <img src="{{ url_for('static', filename='mca.png') }}" class="w-full h-full object-contain">
+            </div>
+            <div>
+                <h1 class="font-bold text-primary dark:text-white leading-tight">QR Scanner</h1>
+                <p class="text-xs text-gray-500 dark:text-slate-400">Attendance Checkpoint</p>
             </div>
         </div>
+        <div class="text-right">
+            <p class="text-primary dark:text-white font-mono font-bold" id="clock">00:00</p>
+        </div>
+    </header>
+
+    <!-- Main Scanner Card -->
+    <div class="w-full max-w-md bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl shadow-2xl p-4 md:p-6 relative z-10 flex flex-col items-center">
         
-        <div id="result-alert" class="alert mt-3" style="display:none;"></div>
+        <div class="relative w-full aspect-square bg-black rounded-2xl overflow-hidden shadow-inner border-4 border-gray-100 dark:border-white/5">
+            <div id="reader" class="w-full h-full"></div>
+            
+            <!-- Scanning Animation -->
+            <div class="absolute inset-0 pointer-events-none">
+                <div class="w-full h-1 bg-gradient-to-r from-transparent via-secondary to-transparent absolute top-0 shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-scan"></div>
+            </div>
+        </div>
+
+        <p class="text-gray-500 dark:text-slate-400 text-sm mt-4 text-center">Position the QR code within the frame.</p>
     </div>
-</div>
 
-<audio id="beep-sound" src="{{ url_for('static', filename='beep.mp3') }}"></audio>
+    <!-- Result Notification Modal -->
+    <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 backdrop-blur-sm bg-black/40">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full transform scale-95 transition-all duration-300 text-center" id="modal-content">
+            <div id="modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"></div>
+            <h3 id="modal-title" class="text-xl font-black text-gray-900 dark:text-white mb-1"></h3>
+            <p id="modal-message" class="text-sm text-gray-500 dark:text-slate-300"></p>
+        </div>
+    </div>
 
-<script>
-    let isProcessing = false;
+    <audio id="beep-sound" src="{{ url_for('static', filename='beep.mp3') }}"></audio>
 
-    function onScanSuccess(decodedText, decodedResult) {
-        if (isProcessing) return;
-        isProcessing = true;
+    <script>
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }, 1000);
 
-        const audio = document.getElementById("beep-sound");
-        if(audio) audio.play().catch(e => console.log('Audio play failed', e));
+        let isProcessing = false;
+        const beep = document.getElementById("beep-sound");
+        const modal = document.getElementById('result-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-message');
 
-        fetch('/process_qr', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ qr_data: decodedText })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const alertBox = document.getElementById('result-alert');
-            alertBox.style.display = 'block';
-            alertBox.className = `alert alert-${data.type === 'error' ? 'danger' : data.type === 'warning' ? 'warning' : 'success'} mt-3`;
-            alertBox.innerText = data.message;
+        function showModal(type, title, message) {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+
+            if (type === 'success') {
+                modalIcon.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400";
+                modalIcon.innerHTML = '<i class="ri-check-line"></i>';
+            } else if (type === 'warning') {
+                modalIcon.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400";
+                modalIcon.innerHTML = '<i class="ri-logout-box-r-line"></i>';
+            } else {
+                modalIcon.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
+                modalIcon.innerHTML = '<i class="ri-close-line"></i>';
+            }
+
+            modalTitle.innerText = title;
+            modalMsg.innerText = message;
 
             setTimeout(() => {
-                alertBox.style.display = 'none';
-                isProcessing = false;
-            }, 3000);
-        })
-        .catch(err => {
-            console.error(err);
-            isProcessing = false;
-        });
-    }
-
-    // Initialize Scanner with responsive aspect ratio
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 }, // Use numeric pixel values for stability
-            aspectRatio: 1.0 
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modalContent.classList.add('scale-95');
+                modalContent.classList.remove('scale-100');
+                isProcessing = false; 
+            }, 2500);
         }
-    );
-    html5QrcodeScanner.render(onScanSuccess);
-</script>
-{% endblock %}
+
+        function onScanSuccess(decodedText) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            if(beep) beep.play().catch(e => console.log(e));
+
+            fetch('/process_qr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_data: decodedText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    if (data.message.includes("Checked IN")) showModal('success', 'Access Granted', data.message);
+                    else showModal('warning', 'Checked Out', data.message);
+                } else {
+                    showModal('error', 'Access Denied', data.message);
+                }
+            })
+            .catch(err => {
+                showModal('error', 'System Error', 'Connection failed.');
+                isProcessing = false;
+            });
+        }
+
+        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, aspectRatio: 1.0 });
+        scanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
