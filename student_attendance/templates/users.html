@@ -42,7 +42,7 @@
                 </select>
             </div>
 
-            <!-- PERMISSIONS CHECKBOXES (Hidden for Super Admin) -->
+            <!-- PERMISSIONS CHECKBOXES -->
             <div id="permissionsArea" class="mb-6 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-600">
                 <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Sub-Admin Privileges</p>
                 <div class="space-y-2">
@@ -57,6 +57,10 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="perm_archive" class="accent-primary w-4 h-4">
                         <span class="text-sm text-gray-700 dark:text-slate-300">Manage Archive (Delete/Restore)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="perm_status" class="accent-primary w-4 h-4">
+                        <span class="text-sm text-gray-700 dark:text-slate-300">Manage System Status (On/Off)</span>
                     </label>
                 </div>
             </div>
@@ -90,12 +94,13 @@
 
                 <!-- Show Privileges Badges -->
                 {% if user.role != 'admin' %}
-                <div class="flex gap-2 mt-1">
+                <div class="flex gap-2 mt-1 flex-wrap">
                     <span class="text-[10px] px-2 rounded border {{ 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400' if user.can_settings else 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:border-slate-700' }}">Settings</span>
                     <span class="text-[10px] px-2 rounded border {{ 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400' if user.can_backup else 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:border-slate-700' }}">Backup</span>
                     <span class="text-[10px] px-2 rounded border {{ 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400' if user.can_archive else 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:border-slate-700' }}">Archive</span>
+                    <span class="text-[10px] px-2 rounded border {{ 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400' if user.can_manage_status else 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:border-slate-700' }}">Status</span>
                     
-                    <button onclick="openPermModal('{{ user.id }}', '{{ user.username }}', {{ 'true' if user.can_settings else 'false' }}, {{ 'true' if user.can_backup else 'false' }}, {{ 'true' if user.can_archive else 'false' }})" class="text-[10px] text-blue-500 hover:underline ml-auto font-bold">Edit</button>
+                    <button onclick="openPermModal('{{ user.id }}', '{{ user.username }}', {{ 'true' if user.can_settings else 'false' }}, {{ 'true' if user.can_backup else 'false' }}, {{ 'true' if user.can_archive else 'false' }}, {{ 'true' if user.can_manage_status else 'false' }})" class="text-[10px] text-blue-500 hover:underline ml-auto font-bold">Edit</button>
                 </div>
                 {% endif %}
                 
@@ -142,6 +147,10 @@
                     <input type="checkbox" name="perm_archive" id="chkArchive" class="accent-primary w-4 h-4">
                     <span class="text-sm text-gray-700 dark:text-slate-300">Manage Archive</span>
                 </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="perm_status" id="chkStatus" class="accent-primary w-4 h-4">
+                    <span class="text-sm text-gray-700 dark:text-slate-300">Manage System Status</span>
+                </label>
             </div>
             <div class="flex gap-3 justify-end">
                 <button type="button" onclick="closePermModal()" class="px-4 py-2 text-gray-600 dark:text-slate-400 font-bold hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition">Cancel</button>
@@ -175,12 +184,13 @@
     // Permissions Modal Logic
     const permModal = document.getElementById('permModal');
     const permContent = document.getElementById('permModalContent');
-    function openPermModal(userId, username, s, b, a) {
+    function openPermModal(userId, username, s, b, a, st) {
         document.getElementById('permForm').action = `/users/update_permissions/${userId}`;
         document.getElementById('permModalUser').innerText = username;
         document.getElementById('chkSettings').checked = s;
         document.getElementById('chkBackup').checked = b;
         document.getElementById('chkArchive').checked = a;
+        document.getElementById('chkStatus').checked = st;
         permModal.classList.remove('hidden');
         setTimeout(() => { permContent.classList.remove('scale-95', 'opacity-0'); permContent.classList.add('scale-100', 'opacity-100'); }, 10);
     }

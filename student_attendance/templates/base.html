@@ -132,7 +132,7 @@
                     </a>
                 </div>
 
-                <!-- PERMISSION BASED LINKS -->
+                <!-- PERMISSION BASED LINKS: Show only if has specific permissions -->
                 {% if user_role == 'admin' or can_settings or can_backup %}
                 <div class="px-4 mb-2">
                     <a href="{{ url_for('settings') }}" class="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
@@ -155,16 +155,6 @@
                     </a>
                 </div>
                 {% endif %}
-
-                <!-- THEME TOGGLE (Accessible to ALL) -->
-                <div class="px-4 mb-2 mt-4 border-t border-blue-800 dark:border-slate-800 pt-4">
-                    <button onclick="toggleTheme()" class="w-full flex items-center space-x-3 p-3 rounded-lg text-blue-100 hover:bg-white/10 hover:text-white transition cursor-pointer">
-                        <i class="ri-moon-line text-lg dark:hidden"></i>
-                        <i class="ri-sun-line text-lg hidden dark:block"></i>
-                        <span class="font-medium dark:hidden">Dark Mode</span>
-                        <span class="font-medium hidden dark:block">Light Mode</span>
-                    </button>
-                </div>
 
                 <div class="px-4 mb-2">
                     <a href="{{ url_for('logout') }}" class="flex items-center space-x-3 p-3 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-white transition border border-transparent hover:border-red-400">

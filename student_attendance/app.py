@@ -1,12 +1,13 @@
-
 import os
 import io
 import uuid 
 import threading
 import zipfile
 import shutil
-import pandas as pd  # <--- ADDED THIS
-import qrcode        # <--- ADDED THIS
+import pandas as pd
+import qrcode
+import openpyxl 
+import requests # Required for SMSMode API
 from datetime import datetime, date
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash, session
@@ -15,16 +16,16 @@ from sqlalchemy import func, or_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# --- TWILIO IMPORT ---
-from twilio.rest import Client
+# ==========================================
+#  CREDENTIALS (SMSMODE)
+# ==========================================
+# 1. Log in to SMSMode
+# 2. Go to Settings/Developers -> API Keys -> Create API Key
+os.environ["SMSMODE_API_KEY"] = "QejZrHVjHDte8n5yjGMPgUUE4fToNnyw" 
 
-# ==========================================
-#  CREDENTIALS
-# ==========================================
-os.environ["TWILIO_ACCOUNT_SID"] = "AC60f78686f47e4b65f7f0af92bbc8de23"
-os.environ["TWILIO_AUTH_TOKEN"] = "6663ed1eeca6441c16a89404df15d830" 
-os.environ["TWILIO_PHONE_NUMBER"] = "+19786473736"
-DEFAULT_COUNTRY_CODE = "+63" 
+# Default country code (Philippines = 63, US = 1, France = 33, etc.)
+# SMSMode requires numbers WITHOUT the '+' sign (e.g., 639171234567)
+DEFAULT_COUNTRY_CODE = "63" 
 
 app = Flask(__name__)
 
@@ -58,16 +59,24 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='sub_admin') # 'admin' or 'sub_admin'
+    role = db.Column(db.String(20), default='sub_admin') 
     
-    # PERMISSIONS (For Sub-Admins)
-    can_settings = db.Column(db.Boolean, default=False) # Manage Grades, Sections, Terms
-    can_backup = db.Column(db.Boolean, default=False)   # Download/Restore Backup
-    can_archive = db.Column(db.Boolean, default=False)  # Delete/Restore/Archive Students
+    # PERMISSIONS
+    can_settings = db.Column(db.Boolean, default=False) 
+    can_backup = db.Column(db.Boolean, default=False)   
+    can_archive = db.Column(db.Boolean, default=False)
+    can_manage_status = db.Column(db.Boolean, default=False) 
+
+class SystemConfig(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    scanner_active = db.Column(db.Boolean, default=True)
+    live_feed_active = db.Column(db.Boolean, default=True)
+    maintenance_mode = db.Column(db.Boolean, default=False)
 
 class GradeOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
+    sequence = db.Column(db.Integer, default=0)
 
 class SectionOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -107,39 +116,70 @@ with app.app_context():
 # --- INITIAL DATA SEEDER ---
 @app.before_request
 def create_tables():
-    # Default Super Admin (All Permissions Implicitly)
     if not User.query.first():
         default_admin = User(username='admin', password_hash=generate_password_hash('admin123'), role='admin', 
-                             can_settings=True, can_backup=True, can_archive=True)
+                             can_settings=True, can_backup=True, can_archive=True, can_manage_status=True)
         db.session.add(default_admin)
         db.session.commit()
         print("Default Admin Created: admin / admin123")
 
+    if not SystemConfig.query.first():
+        db.session.add(SystemConfig(scanner_active=True, live_feed_active=True, maintenance_mode=False))
+        db.session.commit()
+
     if not GradeOption.query.first():
-        for i in range(1, 13): db.session.add(GradeOption(name=f"Grade {i}"))
+        grades_data = [
+            (1, "Nursery"),
+            (2, "Kindergarten"),
+            (3, "Grade 1"), (4, "Grade 2"), (5, "Grade 3"), (6, "Grade 4"), (7, "Grade 5"),
+            (8, "Grade 6"), (9, "Grade 7"), (10, "Grade 8"), (11, "Grade 9"), (12, "Grade 10")
+        ]
+        for seq, name in grades_data:
+            db.session.add(GradeOption(name=name, sequence=seq))
+            
         db.session.add(SectionOption(name="Section A"))
         db.session.add(SectionOption(name="Section B"))
         db.session.add(AcademicTerm(name=f"{date.today().year}-{date.today().year+1}", is_current=True))
         db.session.commit()
 
-# --- CONTEXT PROCESSOR (Injects permissions into HTML) ---
+# --- GLOBAL MAINTENANCE CHECK ---
+@app.before_request
+def check_maintenance_mode():
+    if request.endpoint == 'static': return
+    config = SystemConfig.query.first()
+    if not config: return
+
+    if config.maintenance_mode:
+        if request.path == '/administrator@' or request.endpoint == 'admin_login': return
+        if 'user_id' in session and session.get('role') == 'admin': return
+        
+        if 'user_id' in session:
+            session.clear()
+            flash('System is under maintenance. You have been logged out.', 'error')
+            return render_template('maintenance.html')
+
+        return render_template('maintenance.html')
+
+# --- CONTEXT PROCESSOR ---
 @app.context_processor
 def inject_globals():
+    config = SystemConfig.query.first()
     return dict(
-        global_grades=GradeOption.query.order_by(GradeOption.name).all(),
+        global_grades=GradeOption.query.order_by(GradeOption.sequence).all(),
         global_sections=SectionOption.query.order_by(SectionOption.name).all(),
         global_terms=AcademicTerm.query.order_by(AcademicTerm.name.desc()).all(),
         current_term=AcademicTerm.query.filter_by(is_current=True).first(),
-        # Session Helpers
+        system_status=config,
         current_user_name=session.get('username'),
         user_role=session.get('role'),
         can_settings=session.get('can_settings'),
         can_backup=session.get('can_backup'),
-        can_archive=session.get('can_archive')
+        can_archive=session.get('can_archive'),
+        can_manage_status=session.get('can_manage_status')
     )
 
 # ==========================================
-#  AUTH & PERMISSIONS
+#  PERMISSIONS DECORATORS
 # ==========================================
 def login_required(f):
     @wraps(f)
@@ -150,7 +190,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# SUPER ADMIN ONLY (User Management)
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -160,17 +199,39 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# SETTINGS PERMISSION CHECK
-def settings_permission(f):
+def view_settings_permission(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session: return redirect(url_for('login'))
+        if session.get('role') == 'admin' or session.get('can_settings') or session.get('can_backup') or session.get('can_manage_status'):
+            return f(*args, **kwargs)
+        flash('Access Denied.', 'error')
+        return redirect(url_for('dashboard'))
+    return decorated_function
+
+def modify_settings_permission(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session: return redirect(url_for('login'))
         if session.get('role') != 'admin' and not session.get('can_settings'):
-            flash('You do not have permission to access Settings.', 'error')
-            return redirect(url_for('dashboard'))
+            flash('Access Denied: You cannot modify academic settings.', 'error')
+            return redirect(url_for('settings'))
         return f(*args, **kwargs)
     return decorated_function
 
+def manage_status_permission(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session: return redirect(url_for('login'))
+        if session.get('role') != 'admin' and not session.get('can_manage_status'):
+            flash('Access Denied: You cannot toggle system status.', 'error')
+            return redirect(url_for('settings'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ==========================================
+#  AUTH ROUTES
+# ==========================================
 @app.route('/')
 def home():
     if 'user_id' in session: return redirect(url_for('dashboard'))
@@ -182,14 +243,19 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
+        
+        if user and user.role == 'admin':
+            flash('Super Admins must use the secure portal.', 'error')
+            return redirect(url_for('login'))
+
         if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = user.role
-            # Load permissions into session
-            session['can_settings'] = user.can_settings or user.role == 'admin'
-            session['can_backup'] = user.can_backup or user.role == 'admin'
-            session['can_archive'] = user.can_archive or user.role == 'admin'
+            session['can_settings'] = user.can_settings 
+            session['can_backup'] = user.can_backup 
+            session['can_archive'] = user.can_archive 
+            session['can_manage_status'] = user.can_manage_status 
             
             flash(f'Welcome back, {user.username}!', 'success')
             return redirect(url_for('dashboard'))
@@ -197,14 +263,38 @@ def login():
             flash('Invalid credentials.', 'error')
     return render_template('login.html')
 
+@app.route('/administrator@', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+
+        if user and user.role == 'admin' and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['role'] = user.role
+            session['can_settings'] = True
+            session['can_backup'] = True
+            session['can_archive'] = True
+            session['can_manage_status'] = True
+            
+            flash('Super Admin Access Granted.', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Access Denied: Invalid Admin Credentials.', 'error')
+    
+    return render_template('admin_login.html')
+
 @app.route('/logout')
 def logout():
     session.clear()
     flash('Logged out.', 'info')
     return redirect(url_for('login'))
 
-# --- USER MANAGEMENT (SUPER ADMIN ONLY) ---
-
+# ==========================================
+#  USER MANAGEMENT
+# ==========================================
 @app.route('/users')
 @admin_required
 def manage_users():
@@ -218,10 +308,10 @@ def add_user():
     password = request.form['password']
     role = request.form['role'] 
     
-    # Get Permissions from Checkboxes
     can_settings = 'perm_settings' in request.form
     can_backup = 'perm_backup' in request.form
     can_archive = 'perm_archive' in request.form
+    can_manage_status = 'perm_status' in request.form
 
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'error')
@@ -232,7 +322,8 @@ def add_user():
             role=role,
             can_settings=can_settings,
             can_backup=can_backup,
-            can_archive=can_archive
+            can_archive=can_archive,
+            can_manage_status=can_manage_status
         )
         db.session.add(new_user)
         db.session.commit()
@@ -249,6 +340,7 @@ def update_permissions(user_id):
         user.can_settings = 'perm_settings' in request.form
         user.can_backup = 'perm_backup' in request.form
         user.can_archive = 'perm_archive' in request.form
+        user.can_manage_status = 'perm_status' in request.form
         db.session.commit()
         flash(f'Permissions updated for {user.username}.', 'success')
     return redirect(url_for('manage_users'))
@@ -278,22 +370,51 @@ def change_password(user_id):
     return redirect(url_for('manage_users'))
 
 # ==========================================
-#  SMS HELPER
+#  SMSMODE HELPER
 # ==========================================
 def send_sms_background(to_number, message_body):
     try:
-        account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-        auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-        from_number = os.environ.get("TWILIO_PHONE_NUMBER")
-        if not account_sid or not auth_token or not from_number: return
-        client = Client(account_sid, auth_token)
-        formatted_num = str(to_number).strip()
-        if not formatted_num.startswith('+'):
-            if formatted_num.startswith('0'): formatted_num = formatted_num[1:]
-            formatted_num = DEFAULT_COUNTRY_CODE + formatted_num
-        client.messages.create(body=message_body, from_=from_number, to=formatted_num)
+        api_key = os.environ.get("SMSMODE_API_KEY")
+        if not api_key: return
+
+        # Format number for SMSMode (Required format: CountryCode + Number, no '+')
+        raw_num = str(to_number).strip().replace(" ", "").replace("-", "").replace("+", "")
+        
+        # Simple logic to ensure country code exists
+        # If it starts with 0 (e.g. 0917...), replace 0 with DEFAULT_COUNTRY_CODE (63)
+        if raw_num.startswith("0"):
+            formatted_num = DEFAULT_COUNTRY_CODE + raw_num[1:]
+        # If it already seems to start with the country code (e.g. 63917...), leave it
+        elif raw_num.startswith(DEFAULT_COUNTRY_CODE):
+            formatted_num = raw_num
+        # Fallback: Just prepend country code if length is short (e.g. 917...)
+        elif len(raw_num) == 10:
+             formatted_num = DEFAULT_COUNTRY_CODE + raw_num
+        else:
+            formatted_num = raw_num # Try sending as is if unclear
+
+        # SMSMode V1 REST API
+        url = "https://rest.smsmode.com/sms/v1/messages"
+        headers = {
+            "X-Api-Key": api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "recipient": {
+                "to": formatted_num
+            },
+            "body": {
+                "text": message_body
+            },
+            "from": "MCA" # Optional Sender ID (Max 11 chars alphanumeric)
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        # Uncomment below for debugging
+        # print(f"SMS Response: {response.status_code} - {response.text}")
+
     except Exception as e:
-        print(f"Failed to send SMS to {to_number}: {str(e)}")
+        print(f"Failed to send SMS via SMSMode to {to_number}: {str(e)}")
 
 # ==========================================
 #  BACKUP & RESTORE
@@ -301,7 +422,6 @@ def send_sms_background(to_number, message_body):
 @app.route('/backup_system')
 @login_required
 def backup_system():
-    # Check Permission
     if session.get('role') != 'admin' and not session.get('can_backup'):
         flash('Access Denied: You do not have backup privileges.', 'error')
         return redirect(url_for('settings'))
@@ -376,10 +496,18 @@ def dashboard():
     return render_template('index.html', pie_data=[present_today, absent_today], bar_labels=months, bar_present=monthly_attendance, bar_absent=monthly_absent, latest_logs=latest_logs, today_date=today)
 
 @app.route('/scan')
-def scan(): return render_template('scan.html')
+def scan():
+    config = SystemConfig.query.first()
+    if not config or not config.scanner_active:
+        return render_template('disabled.html', feature="QR Scanner")
+    return render_template('scan.html')
 
 @app.route('/process_qr', methods=['POST'])
 def process_qr():
+    config = SystemConfig.query.first()
+    if not config or not config.scanner_active:
+        return jsonify({'status': 'error', 'message': 'Scanner is currently disabled.'}), 403
+
     data = request.json
     token = data.get('qr_data')
     if not token: return jsonify({'status': 'error', 'message': 'Invalid QR Data'}), 400
@@ -424,26 +552,58 @@ def process_qr():
 # ==========================================
 
 @app.route('/settings')
-@settings_permission # Custom Decorator
+@view_settings_permission 
 def settings(): return render_template('settings.html')
 
+@app.route('/settings/toggle/<feature>')
+@manage_status_permission 
+def toggle_feature(feature):
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig(scanner_active=True, live_feed_active=True, maintenance_mode=False)
+        db.session.add(config)
+    
+    if feature == 'scanner':
+        config.scanner_active = not config.scanner_active
+        status = "enabled" if config.scanner_active else "disabled"
+        flash(f'Scanner has been {status}.', 'success' if config.scanner_active else 'error')
+    elif feature == 'feed':
+        config.live_feed_active = not config.live_feed_active
+        status = "enabled" if config.live_feed_active else "disabled"
+        flash(f'Live Feed has been {status}.', 'success' if config.live_feed_active else 'error')
+    # ONLY ADMIN CAN TOGGLE MAINTENANCE
+    elif feature == 'maintenance':
+        if session.get('role') != 'admin':
+            flash('Only Super Admin can toggle Maintenance Mode.', 'error')
+        else:
+            config.maintenance_mode = not config.maintenance_mode
+            status = "enabled" if config.maintenance_mode else "disabled"
+            flash(f'System Maintenance Mode {status}. Sub-admins locked out.', 'success' if config.maintenance_mode else 'info')
+
+    db.session.commit()
+    return redirect(url_for('settings'))
+
 @app.route('/settings/add_grade', methods=['POST'])
-@settings_permission
+@modify_settings_permission
 def add_grade():
     name = request.form.get('name').strip()
     if name and not GradeOption.query.filter_by(name=name).first():
-        db.session.add(GradeOption(name=name)); db.session.commit(); flash('Grade added', 'success')
+        # Auto-sequence logic
+        max_seq = db.session.query(func.max(GradeOption.sequence)).scalar() or 0
+        db.session.add(GradeOption(name=name, sequence=max_seq + 1))
+        db.session.commit()
+        flash('Grade added', 'success')
     return redirect(url_for('settings'))
 
 @app.route('/settings/delete_grade/<int:id>')
-@settings_permission
+@modify_settings_permission
 def delete_grade(id):
     grade = GradeOption.query.get(id)
     if grade: db.session.delete(grade); db.session.commit(); flash('Grade deleted', 'success')
     return redirect(url_for('settings'))
 
 @app.route('/settings/add_section', methods=['POST'])
-@settings_permission
+@modify_settings_permission
 def add_section():
     name = request.form.get('name').strip()
     if name and not SectionOption.query.filter_by(name=name).first():
@@ -451,14 +611,14 @@ def add_section():
     return redirect(url_for('settings'))
 
 @app.route('/settings/delete_section/<int:id>')
-@settings_permission
+@modify_settings_permission
 def delete_section(id):
     section = SectionOption.query.get(id)
     if section: db.session.delete(section); db.session.commit(); flash('Section deleted', 'success')
     return redirect(url_for('settings'))
 
 @app.route('/settings/add_term', methods=['POST'])
-@settings_permission
+@modify_settings_permission
 def add_term():
     name = request.form.get('name').strip()
     if name and not AcademicTerm.query.filter_by(name=name).first():
@@ -466,7 +626,7 @@ def add_term():
     return redirect(url_for('settings'))
 
 @app.route('/settings/delete_term/<int:id>')
-@settings_permission
+@modify_settings_permission
 def delete_term(id):
     term = AcademicTerm.query.get(id)
     if term: 
@@ -475,7 +635,7 @@ def delete_term(id):
     return redirect(url_for('settings'))
 
 @app.route('/settings/set_current_term/<int:id>')
-@settings_permission
+@modify_settings_permission
 def set_current_term(id):
     db.session.query(AcademicTerm).update({AcademicTerm.is_current: False})
     term = AcademicTerm.query.get(id)
@@ -552,7 +712,6 @@ def admin():
 @app.route('/archive')
 @login_required
 def archive_page():
-    # Permission Check for View Archive
     if session.get('role') != 'admin' and not session.get('can_archive'):
         flash('Access Denied: You do not have archive privileges.', 'error')
         return redirect(url_for('admin'))
@@ -777,10 +936,18 @@ def download_report():
     except: return "Error", 400
 
 @app.route('/live_feed')
-def live_feed(): return render_template('live_feed.html')
+def live_feed():
+    config = SystemConfig.query.first()
+    if not config or not config.live_feed_active:
+        return render_template('disabled.html', feature="Live Feed")
+    return render_template('live_feed.html')
 
 @app.route('/api/latest_attendee')
 def get_latest_attendee():
+    config = SystemConfig.query.first()
+    if not config or not config.live_feed_active:
+         return jsonify({'found': False, 'disabled': True})
+
     today = date.today()
     latest = Attendance.query.filter_by(date=today).order_by(Attendance.in_time.desc()).first()
     if latest:
@@ -810,7 +977,75 @@ def export_students():
     return send_file(output, as_attachment=True, download_name='Students.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/export_filtered_students')
-def export_filtered_students(): return "Not Implemented"
+@login_required
+def export_filtered_students():
+    search_term = request.args.get('search_term', '').strip()
+    grade = request.args.get('grade', '')
+    section = request.args.get('section', '').strip()
+    academic_term = request.args.get('academic_term', '').strip()
+    
+    if not academic_term:
+        current_term_obj = AcademicTerm.query.filter_by(is_current=True).first()
+        academic_term = current_term_obj.name if current_term_obj else ""
+
+    query = Student.query.filter_by(is_archived=False) 
+    if search_term: 
+        query = query.filter((Student.student_number.ilike(f"%{search_term}%")) | (Student.name.ilike(f"%{search_term}%")))
+    if grade: 
+        query = query.filter(Student.grade == grade)
+    if section: 
+        query = query.filter(Student.section == section)
+    if academic_term: 
+        query = query.filter(Student.academic_term == academic_term)
+    
+    students = query.all()
+
+    data = []
+    for s in students:
+        data.append({
+            'Student ID': s.student_number,
+            'Full Name': s.name,
+            'Grade': s.grade,
+            'Section': s.section,
+            'Term': s.academic_term,
+            'QR Code': '' 
+        })
+
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Student_QR_Codes')
+        workbook = writer.book
+        worksheet = writer.sheets['Student_QR_Codes']
+        qr_col_letter = 'F' 
+        worksheet.column_dimensions[qr_col_letter].width = 20
+
+        for i, student in enumerate(students):
+            excel_row = i + 2 
+            qr = qrcode.QRCode(version=1, box_size=5, border=2)
+            qr.add_data(student.qr_token)
+            qr.make(fit=True)
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            qr_img = qr_img.resize((100, 100))
+            img_stream = io.BytesIO()
+            qr_img.save(img_stream, format='PNG')
+            img_stream.seek(0)
+            
+            img = openpyxl.drawing.image.Image(img_stream)
+            img.anchor = f'{qr_col_letter}{excel_row}'
+            worksheet.add_image(img)
+            worksheet.row_dimensions[excel_row].height = 80
+
+    output.seek(0)
+    filename = f'Students_QR_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    
+    return send_file(
+        output, 
+        as_attachment=True, 
+        download_name=filename, 
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

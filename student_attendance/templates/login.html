@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCA Admin Login</title>
+    <title>MCA Staff Login</title>
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
     <script>
@@ -11,12 +11,13 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { primary: '#1e3a8a', secondary: '#fbbf24', dark: '#0f172a' }
+                    colors: { primary: '#1e3a8a', secondary: '#fbbf24', dark: '#0f172a' },
+                    animation: { 'bounce-slow': 'bounce 3s infinite' }
                 }
             }
         }
 
-        // 1. Check LocalStorage or System Preference immediately
+        // Theme Check
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -44,7 +45,7 @@
             <!-- Header -->
             <div class="flex flex-col items-center mb-8">
                 <img src="{{ url_for('static', filename='mca.png') }}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-4 drop-shadow-md animate-bounce-slow">
-                <h2 class="text-2xl sm:text-3xl font-bold text-center text-primary dark:text-white tracking-tight">Admin Portal</h2>
+                <h2 class="text-2xl sm:text-3xl font-bold text-center text-primary dark:text-white tracking-tight">Staff Portal</h2>
                 <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 uppercase tracking-widest font-semibold mt-1">Maranatha Christian Academy</p>
             </div>
             
@@ -63,7 +64,7 @@
             <form method="POST" class="space-y-5">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1.5 uppercase ml-1">Username</label>
-                    <input type="text" name="username" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-secondary/20 focus:border-secondary outline-none transition-all text-sm sm:text-base" required placeholder="Enter your username">
+                    <input type="text" name="username" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-secondary/20 focus:border-secondary outline-none transition-all text-sm sm:text-base" required placeholder="Enter username">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1.5 uppercase ml-1">Password</label>
@@ -71,7 +72,7 @@
                 </div>
                 
                 <button type="submit" class="w-full bg-primary hover:bg-blue-900 dark:bg-blue-600 dark:hover:bg-blue-700 text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base tracking-wide transition-all shadow-lg shadow-blue-900/20 active:scale-95 mt-2">
-                    Sign In to Dashboard
+                    Sign In
                 </button>
             </form>
         </div>
@@ -85,7 +86,6 @@
     </div>
 
     <script>
-        // 2. Toggle Function
         function toggleTheme() {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
